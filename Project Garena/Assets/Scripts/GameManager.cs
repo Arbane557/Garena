@@ -38,9 +38,16 @@ public class GameManager : MonoBehaviour
     [Range(1, 3)] public int maxOrderTraits = 2;
 
     [Header("Ghosts")]
-    public int maxGhosts = 3;
-    [Range(0f, 1f)] public float ghostSpawnChancePerTick = 0.15f;
+    public int maxGhosts = 4;
+    public float ghostSpawnInterval = 4.0f;
     public float ghostMergeSeconds = 2.0f;
+
+    [Header("Trait Tiles")]
+    public float traitSpawnInterval = 3.0f;
+    public float traitMergeSeconds = 2.0f;
+
+    [Header("Items")]
+    public float itemSpawnInterval = 5.0f;
 
     [Header("Sentient Tick")]
     public float sentientTickInterval = 1.0f;
@@ -58,12 +65,16 @@ public class GameManager : MonoBehaviour
 
     private float tickTimer = 0f;
     private float sentientTickTimer = 0f;
+    private float ghostSpawnTimer = 0f;
+    private float traitSpawnTimer = 0f;
+    private float itemSpawnTimer = 0f;
 
     public List<Ghost> ghosts = new List<Ghost>();
 
     private CellView[] cells;
     private System.Random rng;
     private Dictionary<string, GhostMergeState> ghostMerge = new Dictionary<string, GhostMergeState>();
+    private Dictionary<string, GhostMergeState> traitMerge = new Dictionary<string, GhostMergeState>();
 
     void Awake()
     {
@@ -104,8 +115,42 @@ public class GameManager : MonoBehaviour
             SentientTick();
         }
 
+        // Timed spawns
+        if (ghostSpawnInterval > 0f)
+        {
+            ghostSpawnTimer += Time.deltaTime;
+            if (ghostSpawnTimer >= ghostSpawnInterval)
+            {
+                ghostSpawnTimer -= ghostSpawnInterval;
+                TrySpawnGhost();
+            }
+        }
+
+        if (traitSpawnInterval > 0f)
+        {
+            traitSpawnTimer += Time.deltaTime;
+            if (traitSpawnTimer >= traitSpawnInterval)
+            {
+                traitSpawnTimer -= traitSpawnInterval;
+                TrySpawnTraitTile();
+            }
+        }
+
+        if (itemSpawnInterval > 0f)
+        {
+            itemSpawnTimer += Time.deltaTime;
+            if (itemSpawnTimer >= itemSpawnInterval)
+            {
+                itemSpawnTimer -= itemSpawnInterval;
+                SpawnQueuedAtSelector();
+            }
+        }
+
         // Ghost adjacency merge
         UpdateGhostMerges(Time.deltaTime);
+
+        // Trait adjacency merge
+        UpdateTraitMerges(Time.deltaTime);
 
         // Chaos tick (optional, if you still want periodic events)
         tickTimer += Time.deltaTime;
@@ -156,8 +201,19 @@ public class GameManager : MonoBehaviour
     // If not needed, delete this function and its call.
     void InitInitialTraits()
     {
-        // Example: do nothing (recommended for clean start)
-        // Leave empty or remove entirely.
+        int spawned = 0;
+        int attempts = 0;
+        while (spawned < initialTraitCount && attempts < grid.Length * 4)
+        {
+            attempts++;
+            int idx = rng.Next(0, grid.Length);
+            var p = IdxToPos(idx);
+            if (IsDeliveryZone(p)) continue;
+            if (grid[idx] != null) continue;
+
+            grid[idx] = BoxEntity.CreateTraitTile(RandomTraitTile());
+            spawned++;
+        }
     }
 
     // ----------------------------
@@ -182,12 +238,22 @@ public class GameManager : MonoBehaviour
         if (kb.leftArrowKey.wasPressedThisFrame) ShoveSelected(new Vector2Int(-1, 0));
         if (kb.rightArrowKey.wasPressedThisFrame) ShoveSelected(new Vector2Int(1, 0));
 
-        // Enter: spawn if empty, else submit if on delivery zone
+        // Enter: if on delivery zone, submit selected tile; otherwise spawn if empty
         if (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame)
         {
             int idx = PosToIdx(selector);
-            if (grid[idx] == null) SpawnBoxAtSelector();
-            else AttemptSubmit();
+            if (IsDeliveryZone(selector))
+            {
+                AttemptSubmit();
+            }
+            else if (grid[idx] == null)
+            {
+                SpawnBoxAtSelector();
+            }
+            else
+            {
+                status = "NOT DELIVERY";
+            }
         }
 
         if (moved) RenderAll();
@@ -201,6 +267,12 @@ public class GameManager : MonoBehaviour
         int curIdx = PosToIdx(selector);
         var box = grid[curIdx];
         if (box == null) return;
+
+        // Haunted items invert control
+        if (box.Has(TraitType.Haunted))
+        {
+            dir = -dir;
+        }
 
         var next = selector + dir;
         if (!InBounds(next)) return;
@@ -246,9 +318,7 @@ public class GameManager : MonoBehaviour
         int idx = PosToIdx(selector);
         if (grid[idx] != null) return;
 
-        var sub = conveyor.Peek();
-        conveyor.Dequeue();
-        conveyor.Enqueue(RandomItemType());
+        var sub = DequeueConveyor();
         bufferView?.Set(conveyor.ToArray());
 
         grid[idx] = new BoxEntity(sub);
@@ -265,6 +335,23 @@ public class GameManager : MonoBehaviour
         {
             RenderAll();
         }
+    }
+
+    void SpawnQueuedAtSelector()
+    {
+        int idx = PosToIdx(selector);
+        if (grid[idx] != null)
+        {
+            status = "SPAWN BLOCKED";
+            return;
+        }
+
+        var sub = DequeueConveyor();
+        bufferView?.Set(conveyor.ToArray());
+
+        grid[idx] = new BoxEntity(sub);
+        status = "AUTO SPAWN";
+        RenderAll();
     }
 
     // ----------------------------
@@ -288,7 +375,8 @@ public class GameManager : MonoBehaviour
         {
             reputation -= 10;
             status = "ORDER FAILED";
-            GenerateNewOrder();
+            SpawnQueuedAtSelector();
+            currentOrder.timeLeft = orderLifetime;
 
             if (reputation <= minReputation) GameOver();
         }
@@ -312,6 +400,12 @@ public class GameManager : MonoBehaviour
         int idx = PosToIdx(selector);
         var box = grid[idx];
         if (box == null)
+        {
+            status = "NOTHING";
+            return;
+        }
+
+        if (IsTraitTile(box))
         {
             status = "NOTHING";
             return;
@@ -466,15 +560,54 @@ public class GameManager : MonoBehaviour
                 new Vector2Int(1,0), new Vector2Int(-1,0),
                 new Vector2Int(0,1), new Vector2Int(0,-1)
             };
-            var d = dirs[rng.Next(0, dirs.Length)];
-            var np = p + d;
-            if (!InBounds(np)) continue;
+            // Shuffle directions for better movement chances
+            for (int k = 0; k < dirs.Length; k++)
+            {
+                int swap = rng.Next(k, dirs.Length);
+                (dirs[k], dirs[swap]) = (dirs[swap], dirs[k]);
+            }
 
-            int ni = PosToIdx(np);
-            if (grid[ni] != null) continue;
+            var mover = grid[i];
+            bool isGhost = IsGhost(mover);
+            double moveChance = isGhost ? 0.8 : 0.6;
+            if (rng.NextDouble() > moveChance) continue;
 
-            grid[ni] = grid[i];
-            grid[i] = null;
+            bool moved = false;
+            foreach (var d in dirs)
+            {
+                var np = p + d;
+                if (!InBounds(np)) continue;
+
+                int ni = PosToIdx(np);
+                if (grid[ni] != null)
+                {
+                    // Ghosts can push normal items
+                    if (isGhost && IsPushable(grid[ni]))
+                    {
+                        var pushPos = np + d;
+                        if (InBounds(pushPos))
+                        {
+                            int pi = PosToIdx(pushPos);
+                            if (grid[pi] == null)
+                            {
+                                grid[pi] = grid[ni];
+                                grid[ni] = mover;
+                                grid[i] = null;
+                                moved = true;
+                                break;
+                            }
+                        }
+                    }
+                    continue;
+                }
+
+                grid[ni] = mover;
+                grid[i] = null;
+                moved = true;
+                break;
+            }
+
+            if (moved) continue;
         }
     }
 
@@ -567,10 +700,108 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    void UpdateTraitMerges(float dt)
+    {
+        var aliveBoxes = new HashSet<string>();
+        var dirs = new[]
+        {
+            new Vector2Int(1,0), new Vector2Int(-1,0),
+            new Vector2Int(0,1), new Vector2Int(0,-1)
+        };
+
+        for (int i = 0; i < grid.Length; i++)
+        {
+            var box = grid[i];
+            if (box == null || IsGhost(box) || IsTraitTile(box)) continue;
+
+            aliveBoxes.Add(box.id);
+            var p = IdxToPos(i);
+
+            BoxEntity tile = null;
+            int tileIdx = -1;
+            foreach (var d in dirs)
+            {
+                var np = p + d;
+                if (!InBounds(np)) continue;
+                int ni = PosToIdx(np);
+                var cand = grid[ni];
+                if (cand == null || !IsTraitTile(cand)) continue;
+                tile = cand;
+                tileIdx = ni;
+                break;
+            }
+
+            if (tile == null)
+            {
+                if (traitMerge.TryGetValue(box.id, out var st))
+                {
+                    st.timer = 0f;
+                    st.targetId = null;
+                }
+                continue;
+            }
+
+            if (!traitMerge.TryGetValue(box.id, out var state))
+            {
+                state = new GhostMergeState();
+            }
+
+            if (state.targetId == tile.id)
+            {
+                state.timer += dt;
+            }
+            else
+            {
+                state.targetId = tile.id;
+                state.timer = dt;
+            }
+
+            if (state.timer >= traitMergeSeconds)
+            {
+                if (!box.Has(tile.tileTrait))
+                {
+                    box.AddTrait(tile.tileTrait);
+                    grid[tileIdx] = null;
+                    status = $"ABSORBED {tile.tileTrait}".ToUpper();
+                }
+
+                state.timer = 0f;
+                state.targetId = null;
+            }
+
+            traitMerge[box.id] = state;
+        }
+
+        if (traitMerge.Count > 0)
+        {
+            var dead = new List<string>();
+            foreach (var kv in traitMerge)
+            {
+                if (!aliveBoxes.Contains(kv.Key)) dead.Add(kv.Key);
+            }
+            foreach (var id in dead) traitMerge.Remove(id);
+        }
+    }
+
+    void TrySpawnTraitTile()
+    {
+        var empty = new List<int>();
+        for (int i = 0; i < grid.Length; i++)
+        {
+            if (grid[i] != null) continue;
+            var p = IdxToPos(i);
+            if (IsDeliveryZone(p)) continue;
+            empty.Add(i);
+        }
+
+        if (empty.Count == 0) return;
+        int idx = empty[rng.Next(0, empty.Count)];
+
+        grid[idx] = BoxEntity.CreateTraitTile(RandomTraitTile());
+    }
+
     void TrySpawnGhost()
     {
-        if (rng.NextDouble() > ghostSpawnChancePerTick) return;
-
         int ghostCount = grid.Count(b => IsGhost(b));
         if (ghostCount >= maxGhosts) return;
 
@@ -601,8 +832,6 @@ public class GameManager : MonoBehaviour
             if (b == null) continue;
             b.traits.Remove(TraitType.Haunted);
         }
-
-        TrySpawnGhost();
     }
 
     // ----------------------------
@@ -620,12 +849,22 @@ public class GameManager : MonoBehaviour
 
     bool IsDeliveryZone(Vector2Int p) => deliveryZones.Contains(p);
     bool IsGhost(BoxEntity b) => b != null && b.subType == ItemSubType.Ghost;
+    bool IsTraitTile(BoxEntity b) => b != null && b.isTraitTile;
+    bool IsPushable(BoxEntity b) => b != null && !IsGhost(b) && !IsTraitTile(b);
 
     ItemSubType RandomItemType()
     {
         // Only spawn real item types (exclude Ghost)
         var vals = new[] { ItemSubType.Bread, ItemSubType.Knife, ItemSubType.WaterBottle };
         return vals[rng.Next(0, vals.Length)];
+    }
+
+    ItemSubType DequeueConveyor()
+    {
+        var sub = conveyor.Peek();
+        conveyor.Dequeue();
+        conveyor.Enqueue(RandomItemType());
+        return sub;
     }
 
     List<TraitType> RandomRequiredTraits()
@@ -643,6 +882,12 @@ public class GameManager : MonoBehaviour
         }
 
         return set.ToList();
+    }
+
+    TraitType RandomTraitTile()
+    {
+        var candidates = new[] { TraitType.Fire, TraitType.Ice, TraitType.Sentient };
+        return candidates[rng.Next(0, candidates.Length)];
     }
 
     void OnCellClicked(int idx)

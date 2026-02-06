@@ -45,6 +45,13 @@ public class CellView : MonoBehaviour
 
         if (e == null) return;
 
+        if (e.isTraitTile)
+        {
+            mainIcon.enabled = true;
+            mainIcon.sprite = TraitSprite(e.tileTrait);
+            return;
+        }
+
         mainIcon.enabled = true;
         mainIcon.sprite = BoxSprite(e.subType);
 
@@ -54,6 +61,7 @@ public class CellView : MonoBehaviour
             img.sprite = TraitSprite(t);
             img.enabled = true;
         }
+
     }
 
     Sprite BoxSprite(ItemSubType st)

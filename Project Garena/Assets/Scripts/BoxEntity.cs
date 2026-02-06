@@ -10,6 +10,10 @@ public class BoxEntity
     // Traits currently applied to the box
     public HashSet<TraitType> traits = new HashSet<TraitType>();
 
+    // Trait tile data
+    public bool isTraitTile = false;
+    public TraitType tileTrait;
+
     // Fire expires after 5 seconds
     public float fireTimer = 0f;
 
@@ -17,6 +21,14 @@ public class BoxEntity
     {
         this.subType = subType;
         id = Guid.NewGuid().ToString();
+    }
+
+    public static BoxEntity CreateTraitTile(TraitType t)
+    {
+        var e = new BoxEntity(ItemSubType.TraitTile);
+        e.isTraitTile = true;
+        e.tileTrait = t;
+        return e;
     }
 
     public bool Has(TraitType t) => traits != null && traits.Contains(t);
