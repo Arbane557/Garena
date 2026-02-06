@@ -97,7 +97,9 @@ public class CellView : MonoBehaviour
         float w = cellSize.x * size.x + spacing.x * (size.x - 1);
         float h = cellSize.y * size.y + spacing.y * (size.y - 1);
         rt.sizeDelta = new Vector2(w, h);
-        rt.anchoredPosition = Vector2.zero;
+        float offsetX = (size.x > 1) ? (cellSize.x + spacing.x) * 0.5f : 0f;
+        float offsetY = (size.y > 1) ? -(cellSize.y + spacing.y) * 0.5f : 0f;
+        rt.anchoredPosition = new Vector2(offsetX, offsetY);
     }
 
     Sprite BoxSprite(ItemSubType st)
