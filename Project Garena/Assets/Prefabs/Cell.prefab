@@ -222,15 +222,14 @@ MonoBehaviour:
   traitIconRow: {fileID: 9177288604861638592}
   traitIconPrefab: {fileID: 1491960634412083393, guid: b7fdd049fb406464182ae7c586632612, type: 3}
   outline: {fileID: 3952280633453454103}
-  breadSprite: {fileID: 0}
-  knifeSprite: {fileID: 0}
-  armorSprite: {fileID: 0}
-  hotSprite: {fileID: 0}
-  coldSprite: {fileID: 0}
-  heavySprite: {fileID: 0}
-  slipperySprite: {fileID: 0}
-  sharpSprite: {fileID: 0}
-  sentientSprite: {fileID: 0}
+  breadSprite: {fileID: 21300000, guid: 282c7b5ebc6995046bf2b61b1056c8c9, type: 3}
+  knifeSprite: {fileID: 21300000, guid: bea87b5d7528f5042b8e69638d60c9ca, type: 3}
+  waterBottleSprite: {fileID: 21300000, guid: e4375fe2060f8dd4b830ccd32a4f7317, type: 3}
+  ghostSprite: {fileID: 21300000, guid: 8fd68ee9e70413b44a20811935840de9, type: 3}
+  fireSprite: {fileID: 21300000, guid: db5d6a48ef5589c4c8d055e72a0f0f94, type: 3}
+  iceSprite: {fileID: 21300000, guid: c278f3655703e4848a48d534936efa79, type: 3}
+  sentientSprite: {fileID: 21300000, guid: 8fd68ee9e70413b44a20811935840de9, type: 3}
+  hauntedSprite: {fileID: 21300000, guid: 8fd68ee9e70413b44a20811935840de9, type: 3}
 --- !u!1 &5111166945738807891
 GameObject:
   m_ObjectHideFlags: 0

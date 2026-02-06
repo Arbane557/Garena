@@ -15,6 +15,7 @@ public class CellView : MonoBehaviour
     public Sprite breadSprite;
     public Sprite knifeSprite;
     public Sprite waterBottleSprite;
+    public Sprite ghostSprite;
 
     public Sprite fireSprite;
     public Sprite iceSprite;
@@ -62,6 +63,7 @@ public class CellView : MonoBehaviour
             ItemSubType.Bread => breadSprite,
             ItemSubType.Knife => knifeSprite,
             ItemSubType.WaterBottle => waterBottleSprite,
+            ItemSubType.Ghost => ghostSprite,
             _ => null
         };
     }

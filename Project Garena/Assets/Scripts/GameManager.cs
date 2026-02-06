@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.InputSystem;
 using TMPro;
 
 public class GameManager : MonoBehaviour
@@ -32,6 +33,15 @@ public class GameManager : MonoBehaviour
     public float orderInterval = 6f;
     public float orderLifetime = 12f;
 
+    [Header("Order Traits")]
+    [Range(1, 3)] public int minOrderTraits = 1;
+    [Range(1, 3)] public int maxOrderTraits = 2;
+
+    [Header("Ghosts")]
+    public int maxGhosts = 3;
+    [Range(0f, 1f)] public float ghostSpawnChancePerTick = 0.15f;
+    public float ghostMergeSeconds = 2.0f;
+
     [Header("Sentient Tick")]
     public float sentientTickInterval = 1.0f;
 
@@ -53,6 +63,7 @@ public class GameManager : MonoBehaviour
 
     private CellView[] cells;
     private System.Random rng;
+    private Dictionary<string, GhostMergeState> ghostMerge = new Dictionary<string, GhostMergeState>();
 
     void Awake()
     {
@@ -92,6 +103,9 @@ public class GameManager : MonoBehaviour
             sentientTickTimer -= sentientTickInterval;
             SentientTick();
         }
+
+        // Ghost adjacency merge
+        UpdateGhostMerges(Time.deltaTime);
 
         // Chaos tick (optional, if you still want periodic events)
         tickTimer += Time.deltaTime;
@@ -151,25 +165,32 @@ public class GameManager : MonoBehaviour
     // ----------------------------
     void HandleInput()
     {
+        var kb = Keyboard.current;
+        if (kb == null) return;
+
+        bool moved = false;
+
         // Selector movement (WASD)
-        if (Input.GetKeyDown(KeyCode.W)) selector.y = Mathf.Max(0, selector.y - 1);
-        if (Input.GetKeyDown(KeyCode.S)) selector.y = Mathf.Min(gridSize - 1, selector.y + 1);
-        if (Input.GetKeyDown(KeyCode.A)) selector.x = Mathf.Max(0, selector.x - 1);
-        if (Input.GetKeyDown(KeyCode.D)) selector.x = Mathf.Min(gridSize - 1, selector.x + 1);
+        if (kb.wKey.wasPressedThisFrame) { selector.y = Mathf.Max(0, selector.y - 1); moved = true; }
+        if (kb.sKey.wasPressedThisFrame) { selector.y = Mathf.Min(gridSize - 1, selector.y + 1); moved = true; }
+        if (kb.aKey.wasPressedThisFrame) { selector.x = Mathf.Max(0, selector.x - 1); moved = true; }
+        if (kb.dKey.wasPressedThisFrame) { selector.x = Mathf.Min(gridSize - 1, selector.x + 1); moved = true; }
 
         // Shove (Arrow keys)
-        if (Input.GetKeyDown(KeyCode.UpArrow)) ShoveSelected(new Vector2Int(0, -1));
-        if (Input.GetKeyDown(KeyCode.DownArrow)) ShoveSelected(new Vector2Int(0, 1));
-        if (Input.GetKeyDown(KeyCode.LeftArrow)) ShoveSelected(new Vector2Int(-1, 0));
-        if (Input.GetKeyDown(KeyCode.RightArrow)) ShoveSelected(new Vector2Int(1, 0));
+        if (kb.upArrowKey.wasPressedThisFrame) ShoveSelected(new Vector2Int(0, -1));
+        if (kb.downArrowKey.wasPressedThisFrame) ShoveSelected(new Vector2Int(0, 1));
+        if (kb.leftArrowKey.wasPressedThisFrame) ShoveSelected(new Vector2Int(-1, 0));
+        if (kb.rightArrowKey.wasPressedThisFrame) ShoveSelected(new Vector2Int(1, 0));
 
         // Enter: spawn if empty, else submit if on delivery zone
-        if (Input.GetKeyDown(KeyCode.Return))
+        if (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame)
         {
             int idx = PosToIdx(selector);
             if (grid[idx] == null) SpawnBoxAtSelector();
             else AttemptSubmit();
         }
+
+        if (moved) RenderAll();
     }
 
     // ----------------------------
@@ -225,14 +246,25 @@ public class GameManager : MonoBehaviour
         int idx = PosToIdx(selector);
         if (grid[idx] != null) return;
 
-        var sub = conveyor.Dequeue();
+        var sub = conveyor.Peek();
+        conveyor.Dequeue();
         conveyor.Enqueue(RandomItemType());
         bufferView?.Set(conveyor.ToArray());
 
         grid[idx] = new BoxEntity(sub);
 
         status = "SPAWNED";
-        RenderAll();
+        // Update just the spawned cell immediately, then refresh HUD
+        if (cells != null && idx >= 0 && idx < cells.Length)
+        {
+            var p = IdxToPos(idx);
+            cells[idx].SetCell(grid[idx], p == selector, IsDeliveryZone(p));
+            RenderHud();
+        }
+        else
+        {
+            RenderAll();
+        }
     }
 
     // ----------------------------
@@ -264,14 +296,15 @@ public class GameManager : MonoBehaviour
 
     void GenerateNewOrder()
     {
+        var traits = RandomRequiredTraits();
         currentOrder = new Order
         {
             subType = RandomItemType(),
-            requiredTrait = RandomRequiredTrait(),
+            requiredTraits = traits,
             timeLeft = orderLifetime
         };
 
-        wantedView?.SetWanted(currentOrder.subType, currentOrder.requiredTrait, currentOrder.timeLeft, orderLifetime);
+        wantedView?.SetWanted(currentOrder.subType, currentOrder.requiredTraits, currentOrder.timeLeft, orderLifetime);
     }
 
     void AttemptSubmit()
@@ -281,6 +314,12 @@ public class GameManager : MonoBehaviour
         if (box == null)
         {
             status = "NOTHING";
+            return;
+        }
+
+        if (IsGhost(box))
+        {
+            status = "GHOST BLOCKS SUBMIT";
             return;
         }
 
@@ -297,7 +336,7 @@ public class GameManager : MonoBehaviour
         }
 
         bool okType = box.subType == currentOrder.subType;
-        bool okTrait = box.traits.Contains(currentOrder.requiredTrait);
+        bool okTrait = currentOrder.requiredTraits.All(t => box.traits.Contains(t));
 
         if (okType && okTrait)
         {
@@ -313,6 +352,7 @@ public class GameManager : MonoBehaviour
 
         grid[idx] = null;
         GenerateNewOrder();
+        InitDeliveryZones();
         RenderAll();
     }
 
@@ -438,6 +478,119 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    void UpdateGhostMerges(float dt)
+    {
+        var aliveGhosts = new HashSet<string>();
+        var dirs = new[]
+        {
+            new Vector2Int(1,0), new Vector2Int(-1,0),
+            new Vector2Int(0,1), new Vector2Int(0,-1)
+        };
+
+        for (int i = 0; i < grid.Length; i++)
+        {
+            var ghost = grid[i];
+            if (!IsGhost(ghost)) continue;
+
+            aliveGhosts.Add(ghost.id);
+            var p = IdxToPos(i);
+
+            BoxEntity target = null;
+            int targetIdx = -1;
+            foreach (var d in dirs)
+            {
+                var np = p + d;
+                if (!InBounds(np)) continue;
+                int ni = PosToIdx(np);
+                var cand = grid[ni];
+                if (cand == null || IsGhost(cand)) continue;
+                target = cand;
+                targetIdx = ni;
+                break;
+            }
+
+            if (target == null)
+            {
+                if (ghostMerge.TryGetValue(ghost.id, out var st))
+                {
+                    st.timer = 0f;
+                    st.targetId = null;
+                }
+                continue;
+            }
+
+            if (!ghostMerge.TryGetValue(ghost.id, out var state))
+            {
+                state = new GhostMergeState();
+            }
+
+            if (state.targetId == target.id)
+            {
+                state.timer += dt;
+            }
+            else
+            {
+                state.targetId = target.id;
+                state.timer = dt;
+            }
+
+            if (state.timer >= ghostMergeSeconds)
+            {
+                foreach (var t in target.traits)
+                {
+                    ghost.AddTrait(t);
+                }
+
+                if (target.Has(TraitType.Fire))
+                {
+                    ghost.fireTimer = Mathf.Max(ghost.fireTimer, target.fireTimer);
+                }
+
+                grid[targetIdx] = null;
+                state.timer = 0f;
+                state.targetId = null;
+                status = "GHOST MERGE";
+            }
+
+            ghostMerge[ghost.id] = state;
+        }
+
+        // cleanup orphaned states
+        if (ghostMerge.Count > 0)
+        {
+            var dead = new List<string>();
+            foreach (var kv in ghostMerge)
+            {
+                if (!aliveGhosts.Contains(kv.Key)) dead.Add(kv.Key);
+            }
+            foreach (var id in dead) ghostMerge.Remove(id);
+        }
+    }
+
+    void TrySpawnGhost()
+    {
+        if (rng.NextDouble() > ghostSpawnChancePerTick) return;
+
+        int ghostCount = grid.Count(b => IsGhost(b));
+        if (ghostCount >= maxGhosts) return;
+
+        var empty = new List<int>();
+        for (int i = 0; i < grid.Length; i++)
+        {
+            if (grid[i] != null) continue;
+            var p = IdxToPos(i);
+            if (IsDeliveryZone(p)) continue;
+            empty.Add(i);
+        }
+
+        if (empty.Count == 0) return;
+        int idx = empty[rng.Next(0, empty.Count)];
+
+        var ghost = new BoxEntity(ItemSubType.Ghost);
+        ghost.AddTrait(TraitType.Sentient);
+        grid[idx] = ghost;
+    }
+
     // Optional: keep if you still want periodic status refresh or random events
     void WorldTick()
     {
@@ -448,28 +601,48 @@ public class GameManager : MonoBehaviour
             if (b == null) continue;
             b.traits.Remove(TraitType.Haunted);
         }
+
+        TrySpawnGhost();
     }
 
     // ----------------------------
     // HELPERS
     // ----------------------------
+    class GhostMergeState
+    {
+        public string targetId;
+        public float timer;
+    }
+
     bool InBounds(Vector2Int p) => p.x >= 0 && p.x < gridSize && p.y >= 0 && p.y < gridSize;
     int PosToIdx(Vector2Int p) => p.y * gridSize + p.x;
     Vector2Int IdxToPos(int idx) => new Vector2Int(idx % gridSize, idx / gridSize);
 
     bool IsDeliveryZone(Vector2Int p) => deliveryZones.Contains(p);
+    bool IsGhost(BoxEntity b) => b != null && b.subType == ItemSubType.Ghost;
 
     ItemSubType RandomItemType()
     {
-        var vals = Enum.GetValues(typeof(ItemSubType)).Cast<ItemSubType>().ToArray();
+        // Only spawn real item types (exclude Ghost)
+        var vals = new[] { ItemSubType.Bread, ItemSubType.Knife, ItemSubType.WaterBottle };
         return vals[rng.Next(0, vals.Length)];
     }
 
-    TraitType RandomRequiredTrait()
+    List<TraitType> RandomRequiredTraits()
     {
         // Only traits that an order can demand
         var candidates = new[] { TraitType.Fire, TraitType.Ice, TraitType.Sentient };
-        return candidates[rng.Next(0, candidates.Length)];
+        int max = Mathf.Clamp(maxOrderTraits, 1, candidates.Length);
+        int min = Mathf.Clamp(minOrderTraits, 1, max);
+        int count = rng.Next(min, max + 1);
+
+        var set = new HashSet<TraitType>();
+        while (set.Count < count)
+        {
+            set.Add(candidates[rng.Next(0, candidates.Length)]);
+        }
+
+        return set.ToList();
     }
 
     void OnCellClicked(int idx)
@@ -505,7 +678,7 @@ public class GameManager : MonoBehaviour
         if (currentOrder != null)
         {
             if (orderTimerText != null) orderTimerText.text = $"TIME: {Mathf.CeilToInt(currentOrder.timeLeft)}";
-            wantedView?.SetWanted(currentOrder.subType, currentOrder.requiredTrait, currentOrder.timeLeft, orderLifetime);
+            wantedView?.SetWanted(currentOrder.subType, currentOrder.requiredTraits, currentOrder.timeLeft, orderLifetime);
         }
 
         bufferView?.Set(conveyor.ToArray());

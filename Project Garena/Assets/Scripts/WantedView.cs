@@ -1,13 +1,16 @@
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System.Collections.Generic;
+using System.Linq;
 
 public class WantedView : MonoBehaviour
 {
     [Header("uGUI")]
     public Image itemIcon;
     public Image traitIcon;
+    public Transform traitIconRow;
+    public Image traitIconPrefab;
 
     // Optional: fill bar for time left
     public Image timerFill;
@@ -22,10 +25,35 @@ public class WantedView : MonoBehaviour
 
     public void SetWanted(ItemSubType subType, TraitType requiredTrait, float timeLeft, float timeTotal)
     {
-        if (itemIcon != null) itemIcon.sprite = ItemSprite(subType);
-        if (traitIcon != null) traitIcon.sprite = TraitSprite(requiredTrait);
+        SetWanted(subType, new List<TraitType> { requiredTrait }, timeLeft, timeTotal);
+    }
 
-        if (labelText != null) labelText.text = $"{requiredTrait.ToString().ToUpper()} {subType.ToString().ToUpper()}";
+    public void SetWanted(ItemSubType subType, IReadOnlyList<TraitType> requiredTraits, float timeLeft, float timeTotal)
+    {
+        if (itemIcon != null) itemIcon.sprite = ItemSprite(subType);
+
+        if (traitIconRow != null && traitIconPrefab != null)
+        {
+            foreach (Transform c in traitIconRow) Destroy(c.gameObject);
+            for (int i = 0; i < requiredTraits.Count; i++)
+            {
+                var img = Instantiate(traitIconPrefab, traitIconRow);
+                img.sprite = TraitSprite(requiredTraits[i]);
+                img.enabled = true;
+            }
+        }
+        else if (traitIcon != null)
+        {
+            traitIcon.sprite = (requiredTraits.Count > 0) ? TraitSprite(requiredTraits[0]) : null;
+        }
+
+        if (labelText != null)
+        {
+            var traitLabel = (requiredTraits.Count == 0)
+                ? "NONE"
+                : string.Join("+", requiredTraits.Select(t => t.ToString().ToUpper()));
+            labelText.text = $"{traitLabel} {subType.ToString().ToUpper()}";
+        }
         if (timerText != null) timerText.text = $"{Mathf.CeilToInt(timeLeft)}s";
 
         if (timerFill != null)
