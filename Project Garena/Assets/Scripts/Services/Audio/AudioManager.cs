@@ -19,6 +19,9 @@ namespace Template.Audio
         private readonly List<AudioSource> sfxSources = new List<AudioSource>();
         private AudioSource bgmSource;
         private string currentBgmId;
+        private float masterVolume = 1f;
+        private float sfxVolume = 1f;
+        private float bgmVolume = 1f;
 
         public void Initialize()
         {
@@ -82,7 +85,7 @@ namespace Template.Audio
             if (!sfx.TryGetValue(id, out var data) || data.clip == null) return;
             var src = GetAvailableSfxSource();
             src.clip = data.clip;
-            src.volume = data.volume;
+            src.volume = data.volume * sfxVolume * masterVolume;
             src.loop = data.loop;
             src.Play();
         }
@@ -93,7 +96,7 @@ namespace Template.Audio
             if (currentBgmId == id && bgmSource.isPlaying) return;
             currentBgmId = id;
             bgmSource.clip = data.clip;
-            bgmSource.volume = data.volume;
+            bgmSource.volume = data.volume * bgmVolume * masterVolume;
             bgmSource.loop = data.loop;
             bgmSource.Play();
         }
@@ -112,6 +115,32 @@ namespace Template.Audio
         public void ResumeBgm()
         {
             if (bgmSource != null) bgmSource.UnPause();
+        }
+
+        public void SetMasterVolume(float value)
+        {
+            masterVolume = Mathf.Clamp01(value);
+            ApplyVolumes();
+        }
+
+        public void SetSfxVolume(float value)
+        {
+            sfxVolume = Mathf.Clamp01(value);
+            ApplyVolumes();
+        }
+
+        public void SetBgmVolume(float value)
+        {
+            bgmVolume = Mathf.Clamp01(value);
+            ApplyVolumes();
+        }
+
+        public void ApplyVolumes()
+        {
+            if (bgmSource != null && bgm.TryGetValue(currentBgmId ?? "", out var data) && data != null)
+            {
+                bgmSource.volume = data.volume * bgmVolume * masterVolume;
+            }
         }
 
         private AudioSource GetAvailableSfxSource()

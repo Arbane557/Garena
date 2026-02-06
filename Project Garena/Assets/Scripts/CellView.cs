@@ -23,14 +23,16 @@ public class CellView : MonoBehaviour
     public Sprite hauntedSprite;
 
     private Button btn;
+    private RectTransform rootRect;
 
     public void Init(System.Action onClick)
     {
         btn = GetComponent<Button>();
         if (btn != null) btn.onClick.AddListener(() => onClick?.Invoke());
+        rootRect = GetComponent<RectTransform>();
     }
 
-    public void SetCell(BoxEntity e, bool selected, bool isZone)
+    public void SetCell(BoxEntity e, bool selected, bool isZone, Vector2Int cellPos)
     {
         // Background / outline
         outline.enabled = selected;
@@ -45,23 +47,57 @@ public class CellView : MonoBehaviour
 
         if (e == null) return;
 
+        bool isAnchor = e.anchor == cellPos;
+
         if (e.isTraitTile)
         {
-            mainIcon.enabled = true;
-            mainIcon.sprite = TraitSprite(e.tileTrait);
+            if (isAnchor)
+            {
+                mainIcon.enabled = true;
+                mainIcon.sprite = TraitSprite(e.tileTrait);
+                ApplySize(e.size);
+            }
             return;
         }
 
-        mainIcon.enabled = true;
-        mainIcon.sprite = BoxSprite(e.subType);
-
-        foreach (var t in e.traits)
+        if (isAnchor)
         {
-            var img = Instantiate(traitIconPrefab, traitIconRow);
-            img.sprite = TraitSprite(t);
-            img.enabled = true;
+            mainIcon.enabled = true;
+            mainIcon.sprite = BoxSprite(e.subType);
+            ApplySize(e.size);
         }
 
+        if (isAnchor)
+        {
+            foreach (var t in e.traits)
+            {
+                var img = Instantiate(traitIconPrefab, traitIconRow);
+                img.sprite = TraitSprite(t);
+                img.enabled = true;
+            }
+        }
+
+    }
+
+    void ApplySize(Vector2Int size)
+    {
+        if (rootRect == null) rootRect = GetComponent<RectTransform>();
+        var cellSize = rootRect != null ? rootRect.rect.size : new Vector2(40, 40);
+        var spacing = Vector2.zero;
+        var grid = GetComponentInParent<GridLayoutGroup>();
+        if (grid != null)
+        {
+            cellSize = grid.cellSize;
+            spacing = grid.spacing;
+        }
+        var rt = mainIcon.rectTransform;
+        rt.anchorMin = new Vector2(0.5f, 0.5f);
+        rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        float w = cellSize.x * size.x + spacing.x * (size.x - 1);
+        float h = cellSize.y * size.y + spacing.y * (size.y - 1);
+        rt.sizeDelta = new Vector2(w, h);
+        rt.anchoredPosition = Vector2.zero;
     }
 
     Sprite BoxSprite(ItemSubType st)

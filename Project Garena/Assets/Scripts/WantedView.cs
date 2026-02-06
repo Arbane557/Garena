@@ -18,6 +18,7 @@ public class WantedView : MonoBehaviour
     [Header("TMP")]
     public TMP_Text labelText;   // e.g. "ICE KNIFE"
     public TMP_Text timerText;   // e.g. "9s"
+    public TMP_Text narrativeText; // short flavor line
 
     [Header("Sprites")]
     public Sprite breadSprite, knifeSprite, waterSprite;
@@ -55,6 +56,7 @@ public class WantedView : MonoBehaviour
             labelText.text = $"{traitLabel} {subType.ToString().ToUpper()}";
         }
         if (timerText != null) timerText.text = $"{Mathf.CeilToInt(timeLeft)}s";
+        if (narrativeText != null) narrativeText.text = BuildNarrative(subType, requiredTraits);
 
         if (timerFill != null)
         {
@@ -78,4 +80,41 @@ public class WantedView : MonoBehaviour
         TraitType.Sentient => sentientSprite,
         _ => null
     };
+
+    string BuildNarrative(ItemSubType subType, IReadOnlyList<TraitType> traits)
+    {
+        if (traits == null || traits.Count == 0)
+        {
+            return $"I need a {ItemName(subType)}. Fast.";
+        }
+
+        var adj = string.Join(" and ", traits.Select(TraitAdjective));
+        var target = TraitTarget(traits);
+        return $"I need a {adj} {ItemName(subType)} to face {target}.";
+    }
+
+    string ItemName(ItemSubType subType) => subType switch
+    {
+        ItemSubType.Bread => "bread",
+        ItemSubType.Knife => "sword",
+        ItemSubType.WaterBottle => "potion",
+        _ => "item"
+    };
+
+    string TraitAdjective(TraitType t) => t switch
+    {
+        TraitType.Fire => "fiery",
+        TraitType.Ice => "frozen",
+        TraitType.Sentient => "haunted",
+        TraitType.Haunted => "haunted",
+        _ => t.ToString().ToLower()
+    };
+
+    string TraitTarget(IReadOnlyList<TraitType> traits)
+    {
+        if (traits.Contains(TraitType.Fire)) return "slimes";
+        if (traits.Contains(TraitType.Ice)) return "sparks";
+        if (traits.Contains(TraitType.Sentient) || traits.Contains(TraitType.Haunted)) return "ghosts";
+        return "trouble";
+    }
 }

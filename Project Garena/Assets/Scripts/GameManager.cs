@@ -181,11 +181,6 @@ public class GameManager : MonoBehaviour
     void InitDeliveryZones()
     {
         deliveryZones.Clear();
-        while (deliveryZones.Count < deliveryZoneCount)
-        {
-            var p = new Vector2Int(rng.Next(0, gridSize), rng.Next(0, gridSize));
-            if (!deliveryZones.Contains(p)) deliveryZones.Add(p);
-        }
     }
 
     void InitConveyor()
@@ -211,7 +206,9 @@ public class GameManager : MonoBehaviour
             if (IsDeliveryZone(p)) continue;
             if (grid[idx] != null) continue;
 
-            grid[idx] = BoxEntity.CreateTraitTile(RandomTraitTile());
+            var t = BoxEntity.CreateTraitTile(RandomTraitTile());
+            t.size = Vector2Int.one;
+            PlaceEntity(t, p);
             spawned++;
         }
     }
@@ -238,13 +235,14 @@ public class GameManager : MonoBehaviour
         if (kb.leftArrowKey.wasPressedThisFrame) ShoveSelected(new Vector2Int(-1, 0));
         if (kb.rightArrowKey.wasPressedThisFrame) ShoveSelected(new Vector2Int(1, 0));
 
-        // Enter: if on delivery zone, submit selected tile; otherwise spawn if empty
+        // Enter: submit if pushing above top edge; otherwise spawn if empty
         if (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame)
         {
             int idx = PosToIdx(selector);
-            if (IsDeliveryZone(selector))
+            var box = grid[idx];
+            if (box != null && !IsTraitTile(box) && IsAtTopBoundary(box))
             {
-                AttemptSubmit();
+                AttemptSubmit(box, true);
             }
             else if (grid[idx] == null)
             {
@@ -268,47 +266,45 @@ public class GameManager : MonoBehaviour
         var box = grid[curIdx];
         if (box == null) return;
 
+        if (IsTraitTile(box))
+        {
+            status = "IMMOBILE";
+            return;
+        }
+
         // Haunted items invert control
         if (box.Has(TraitType.Haunted))
         {
             dir = -dir;
         }
 
-        var next = selector + dir;
-        if (!InBounds(next)) return;
+        // Submit when pushing up at the top edge
+        if (dir == new Vector2Int(0, -1) && IsAtTopBoundary(box))
+        {
+            AttemptSubmit(box, true);
+            return;
+        }
 
-        int nextIdx = PosToIdx(next);
-
-        // Collision blocks movement (GDD style)
-        if (grid[nextIdx] != null)
+        bool moved = false;
+        if (box.Has(TraitType.Ice))
+        {
+            while (TryMoveEntity(box, dir, allowPush: false))
+            {
+                moved = true;
+            }
+        }
+        else
+        {
+            moved = TryMoveEntity(box, dir, allowPush: false);
+        }
+        if (!moved)
         {
             status = "BLOCKED";
             return;
         }
 
-        // Ice slide: slide until boundary or next occupied
-        Vector2Int final = next;
-        if (box.Has(TraitType.Ice))
-        {
-            while (true)
-            {
-                var cand = final + dir;
-                if (!InBounds(cand)) break;
-
-                int cIdx = PosToIdx(cand);
-                if (grid[cIdx] != null) break;
-
-                final = cand;
-            }
-        }
-
-        int finalIdx = PosToIdx(final);
-        grid[curIdx] = null;
-        grid[finalIdx] = box;
-
-        // Keep selector following the moved box (matches your React feel)
-        selector = final;
-
+        // Keep selector following the moved box (anchor position)
+        selector = box.anchor;
         status = box.Has(TraitType.Ice) ? "SLID" : "MOVED";
         RenderAll();
     }
@@ -316,19 +312,28 @@ public class GameManager : MonoBehaviour
     void SpawnBoxAtSelector()
     {
         int idx = PosToIdx(selector);
-        if (grid[idx] != null) return;
-
         var sub = DequeueConveyor();
+        var size = GetSizeForSubType(sub);
+        var anchor = selector;
+        if (!CanPlaceAt(anchor, size))
+        {
+            status = "SPAWN BLOCKED";
+            return;
+        }
+
         bufferView?.Set(conveyor.ToArray());
 
-        grid[idx] = new BoxEntity(sub);
+        var e = new BoxEntity(sub);
+        e.size = size;
+        e.anchor = anchor;
+        PlaceEntity(e, anchor);
 
         status = "SPAWNED";
         // Update just the spawned cell immediately, then refresh HUD
         if (cells != null && idx >= 0 && idx < cells.Length)
         {
             var p = IdxToPos(idx);
-            cells[idx].SetCell(grid[idx], p == selector, IsDeliveryZone(p));
+            cells[idx].SetCell(grid[idx], p == selector, false, p);
             RenderHud();
         }
         else
@@ -340,16 +345,20 @@ public class GameManager : MonoBehaviour
     void SpawnQueuedAtSelector()
     {
         int idx = PosToIdx(selector);
-        if (grid[idx] != null)
+        var sub = DequeueConveyor();
+        var size = GetSizeForSubType(sub);
+        var anchor = selector;
+        if (!CanPlaceAt(anchor, size))
         {
             status = "SPAWN BLOCKED";
             return;
         }
-
-        var sub = DequeueConveyor();
         bufferView?.Set(conveyor.ToArray());
 
-        grid[idx] = new BoxEntity(sub);
+        var e = new BoxEntity(sub);
+        e.size = size;
+        e.anchor = anchor;
+        PlaceEntity(e, anchor);
         status = "AUTO SPAWN";
         RenderAll();
     }
@@ -395,33 +404,12 @@ public class GameManager : MonoBehaviour
         wantedView?.SetWanted(currentOrder.subType, currentOrder.requiredTraits, currentOrder.timeLeft, orderLifetime);
     }
 
-    void AttemptSubmit()
+    void AttemptSubmit(BoxEntity box, bool bypassZone)
     {
-        int idx = PosToIdx(selector);
-        var box = grid[idx];
-        if (box == null)
-        {
-            status = "NOTHING";
-            return;
-        }
-
-        if (IsTraitTile(box))
-        {
-            status = "NOTHING";
-            return;
-        }
-
-        if (IsGhost(box))
-        {
-            status = "GHOST BLOCKS SUBMIT";
-            return;
-        }
-
-        if (!IsDeliveryZone(selector))
-        {
-            status = "NOT DELIVERY";
-            return;
-        }
+        if (box == null) { status = "NOTHING"; return; }
+        if (IsTraitTile(box)) { status = "NOTHING"; return; }
+        if (IsGhost(box)) { status = "GHOST BLOCKS SUBMIT"; return; }
+        if (!bypassZone && !IsDeliveryZone(selector)) { status = "NOT DELIVERY"; return; }
 
         if (currentOrder == null)
         {
@@ -439,14 +427,14 @@ public class GameManager : MonoBehaviour
         }
         else
         {
-            reputation -= 2;
+            reputation -= 1;
             status = "WRONG DELIVERY";
             if (reputation <= minReputation) { GameOver(); return; }
         }
 
-        grid[idx] = null;
+        RemoveEntity(box);
         GenerateNewOrder();
-        InitDeliveryZones();
+        // no delivery zones
         RenderAll();
     }
 
@@ -462,11 +450,9 @@ public class GameManager : MonoBehaviour
     // ----------------------------
     void UpdateFireTimers(float dt)
     {
-        for (int i = 0; i < grid.Length; i++)
+        foreach (var box in EnumerateEntities())
         {
-            var box = grid[i];
             if (box == null) continue;
-
             if (box.traits.Contains(TraitType.Fire))
             {
                 box.fireTimer -= dt;
@@ -542,20 +528,19 @@ public class GameManager : MonoBehaviour
     // ----------------------------
     void SentientTick()
     {
-        // snapshot indices to avoid chain-move weirdness
-        var indices = new List<int>();
-        for (int i = 0; i < grid.Length; i++)
+        // snapshot entities to avoid chain-move weirdness
+        var movers = new List<BoxEntity>();
+        foreach (var b in EnumerateEntities())
         {
-            var b = grid[i];
             if (b == null) continue;
-            if (b.Has(TraitType.Sentient) || b.Has(TraitType.Haunted)) indices.Add(i);
+            if (b.Has(TraitType.Sentient) || b.Has(TraitType.Haunted)) movers.Add(b);
         }
 
-        foreach (var i in indices.OrderBy(_ => rng.Next()))
+        foreach (var mover in movers.OrderBy(_ => rng.Next()))
         {
-            if (grid[i] == null) continue;
+            if (mover == null) continue;
 
-            var p = IdxToPos(i);
+            var p = mover.anchor;
             var dirs = new[] {
                 new Vector2Int(1,0), new Vector2Int(-1,0),
                 new Vector2Int(0,1), new Vector2Int(0,-1)
@@ -567,7 +552,6 @@ public class GameManager : MonoBehaviour
                 (dirs[k], dirs[swap]) = (dirs[swap], dirs[k]);
             }
 
-            var mover = grid[i];
             bool isGhost = IsGhost(mover);
             double moveChance = isGhost ? 0.8 : 0.6;
             if (rng.NextDouble() > moveChance) continue;
@@ -581,30 +565,22 @@ public class GameManager : MonoBehaviour
                 int ni = PosToIdx(np);
                 if (grid[ni] != null)
                 {
-                    // Ghosts can push normal items
-                    if (isGhost && IsPushable(grid[ni]))
+                    if (isGhost)
                     {
-                        var pushPos = np + d;
-                        if (InBounds(pushPos))
+                        if (TryMoveEntity(mover, d, allowPush: true))
                         {
-                            int pi = PosToIdx(pushPos);
-                            if (grid[pi] == null)
-                            {
-                                grid[pi] = grid[ni];
-                                grid[ni] = mover;
-                                grid[i] = null;
-                                moved = true;
-                                break;
-                            }
+                            moved = true;
+                            break;
                         }
                     }
                     continue;
                 }
 
-                grid[ni] = mover;
-                grid[i] = null;
-                moved = true;
-                break;
+                if (TryMoveEntity(mover, d, allowPush: false))
+                {
+                    moved = true;
+                    break;
+                }
             }
 
             if (moved) continue;
@@ -713,22 +689,29 @@ public class GameManager : MonoBehaviour
         {
             var box = grid[i];
             if (box == null || IsGhost(box) || IsTraitTile(box)) continue;
-
+            if (aliveBoxes.Contains(box.id)) continue;
             aliveBoxes.Add(box.id);
-            var p = IdxToPos(i);
 
             BoxEntity tile = null;
             int tileIdx = -1;
-            foreach (var d in dirs)
+
+            // Check adjacency for any occupied cell
+            for (int dy = 0; dy < box.size.y; dy++)
+            for (int dx = 0; dx < box.size.x; dx++)
             {
-                var np = p + d;
-                if (!InBounds(np)) continue;
-                int ni = PosToIdx(np);
-                var cand = grid[ni];
-                if (cand == null || !IsTraitTile(cand)) continue;
-                tile = cand;
-                tileIdx = ni;
-                break;
+                var p = new Vector2Int(box.anchor.x + dx, box.anchor.y + dy);
+                foreach (var d in dirs)
+                {
+                    var np = p + d;
+                    if (!InBounds(np)) continue;
+                    int ni = PosToIdx(np);
+                    var cand = grid[ni];
+                    if (cand == null || !IsTraitTile(cand)) continue;
+                    tile = cand;
+                    tileIdx = ni;
+                    break;
+                }
+                if (tile != null) break;
             }
 
             if (tile == null)
@@ -797,7 +780,9 @@ public class GameManager : MonoBehaviour
         if (empty.Count == 0) return;
         int idx = empty[rng.Next(0, empty.Count)];
 
-        grid[idx] = BoxEntity.CreateTraitTile(RandomTraitTile());
+        var t = BoxEntity.CreateTraitTile(RandomTraitTile());
+        t.size = Vector2Int.one;
+        PlaceEntity(t, IdxToPos(idx));
     }
 
     void TrySpawnGhost()
@@ -818,8 +803,9 @@ public class GameManager : MonoBehaviour
         int idx = empty[rng.Next(0, empty.Count)];
 
         var ghost = new BoxEntity(ItemSubType.Ghost);
+        ghost.size = Vector2Int.one;
         ghost.AddTrait(TraitType.Sentient);
-        grid[idx] = ghost;
+        PlaceEntity(ghost, IdxToPos(idx));
     }
 
     // Optional: keep if you still want periodic status refresh or random events
@@ -847,10 +833,116 @@ public class GameManager : MonoBehaviour
     int PosToIdx(Vector2Int p) => p.y * gridSize + p.x;
     Vector2Int IdxToPos(int idx) => new Vector2Int(idx % gridSize, idx / gridSize);
 
-    bool IsDeliveryZone(Vector2Int p) => deliveryZones.Contains(p);
+    bool IsDeliveryZone(Vector2Int p) => false;
     bool IsGhost(BoxEntity b) => b != null && b.subType == ItemSubType.Ghost;
     bool IsTraitTile(BoxEntity b) => b != null && b.isTraitTile;
-    bool IsPushable(BoxEntity b) => b != null && !IsGhost(b) && !IsTraitTile(b);
+    bool IsPushable(BoxEntity b) => b != null;
+
+    Vector2Int GetSizeForSubType(ItemSubType st)
+    {
+        return st switch
+        {
+            ItemSubType.Knife => new Vector2Int(2, 1),
+            ItemSubType.WaterBottle => new Vector2Int(1, 2),
+            _ => Vector2Int.one
+        };
+    }
+
+    bool CanPlaceAt(Vector2Int anchor, Vector2Int size)
+    {
+        for (int dy = 0; dy < size.y; dy++)
+        for (int dx = 0; dx < size.x; dx++)
+        {
+            var p = new Vector2Int(anchor.x + dx, anchor.y + dy);
+            if (!InBounds(p)) return false;
+            if (grid[PosToIdx(p)] != null) return false;
+        }
+        return true;
+    }
+
+    void PlaceEntity(BoxEntity e, Vector2Int anchor)
+    {
+        e.anchor = anchor;
+        for (int dy = 0; dy < e.size.y; dy++)
+        for (int dx = 0; dx < e.size.x; dx++)
+        {
+            var p = new Vector2Int(anchor.x + dx, anchor.y + dy);
+            grid[PosToIdx(p)] = e;
+        }
+    }
+
+    void RemoveEntity(BoxEntity e)
+    {
+        for (int dy = 0; dy < e.size.y; dy++)
+        for (int dx = 0; dx < e.size.x; dx++)
+        {
+            var p = new Vector2Int(e.anchor.x + dx, e.anchor.y + dy);
+            if (InBounds(p) && grid[PosToIdx(p)] == e)
+            {
+                grid[PosToIdx(p)] = null;
+            }
+        }
+    }
+
+    bool IsAtTopBoundary(BoxEntity e)
+    {
+        return e.anchor.y == 0;
+    }
+
+    bool TryMoveEntity(BoxEntity e, Vector2Int dir, bool allowPush)
+    {
+        if (e == null) return false;
+        if (IsTraitTile(e)) return false;
+
+        var visited = new HashSet<BoxEntity>();
+        return TryMoveEntityInternal(e, dir, allowPush, visited);
+    }
+
+    bool TryMoveEntityInternal(BoxEntity e, Vector2Int dir, bool allowPush, HashSet<BoxEntity> visited)
+    {
+        if (visited.Contains(e)) return true;
+        visited.Add(e);
+
+        var newAnchor = e.anchor + dir;
+        var size = e.size;
+
+        // Bounds
+        for (int dy = 0; dy < size.y; dy++)
+        for (int dx = 0; dx < size.x; dx++)
+        {
+            var p = new Vector2Int(newAnchor.x + dx, newAnchor.y + dy);
+            if (!InBounds(p)) return false;
+        }
+
+        // Resolve blockers
+        for (int dy = 0; dy < size.y; dy++)
+        for (int dx = 0; dx < size.x; dx++)
+        {
+            var p = new Vector2Int(newAnchor.x + dx, newAnchor.y + dy);
+            var idx = PosToIdx(p);
+            var blocker = grid[idx];
+            if (blocker == null || blocker == e) continue;
+
+            if (!allowPush) return false;
+            if (!TryMoveEntityInternal(blocker, dir, true, visited)) return false;
+        }
+
+        // Move
+        RemoveEntity(e);
+        PlaceEntity(e, newAnchor);
+        return true;
+    }
+
+    IEnumerable<BoxEntity> EnumerateEntities()
+    {
+        var seen = new HashSet<string>();
+        for (int i = 0; i < grid.Length; i++)
+        {
+            var e = grid[i];
+            if (e == null) continue;
+            if (seen.Add(e.id)) yield return e;
+        }
+    }
 
     ItemSubType RandomItemType()
     {
@@ -892,7 +984,8 @@ public class GameManager : MonoBehaviour
 
     void OnCellClicked(int idx)
     {
-        selector = IdxToPos(idx);
+        var e = grid[idx];
+        selector = (e != null) ? e.anchor : IdxToPos(idx);
         RenderAll();
     }
 
@@ -905,8 +998,7 @@ public class GameManager : MonoBehaviour
         {
             var p = IdxToPos(i);
             bool selected = (p == selector);
-            bool zone = IsDeliveryZone(p);   
-            cells[i].SetCell(grid[i], selected, zone);
+            cells[i].SetCell(grid[i], selected, false, p);
         }
         RenderHud();
     }

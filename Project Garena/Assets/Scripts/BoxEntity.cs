@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 [Serializable]
 public class BoxEntity
@@ -13,6 +14,10 @@ public class BoxEntity
     // Trait tile data
     public bool isTraitTile = false;
     public TraitType tileTrait;
+
+    // Grid footprint
+    public Vector2Int anchor;
+    public Vector2Int size = Vector2Int.one;
 
     // Fire expires after 5 seconds
     public float fireTimer = 0f;
