@@ -34,8 +34,8 @@ public class GameManager : MonoBehaviour
     public float orderLifetime = 12f;
 
     [Header("Order Traits")]
-    [Range(1, 3)] public int minOrderTraits = 1;
-    [Range(1, 3)] public int maxOrderTraits = 2;
+    [Range(0, 3)] public int minOrderTraits = 0;
+    [Range(0, 3)] public int maxOrderTraits = 1;
 
     [Header("Ghosts")]
     public int maxGhosts = 4;
@@ -75,6 +75,7 @@ public class GameManager : MonoBehaviour
     private System.Random rng;
     private Dictionary<string, GhostMergeState> ghostMerge = new Dictionary<string, GhostMergeState>();
     private Dictionary<string, GhostMergeState> traitMerge = new Dictionary<string, GhostMergeState>();
+    private Dictionary<string, Vector2Int> lastAnchor = new Dictionary<string, Vector2Int>();
 
     void Awake()
     {
@@ -107,7 +108,7 @@ public class GameManager : MonoBehaviour
         // Ghosts: aura + movement
         UpdateGhosts(Time.deltaTime);
 
-        // Sentient autonomous movement
+        // Ghost autonomous movement
         sentientTickTimer += Time.deltaTime;
         if (sentientTickTimer >= sentientTickInterval)
         {
@@ -307,6 +308,7 @@ public class GameManager : MonoBehaviour
         selector = box.anchor;
         status = box.Has(TraitType.Ice) ? "SLID" : "MOVED";
         RenderAll();
+        UpdateAnchorCache();
     }
 
     void SpawnBoxAtSelector()
@@ -323,17 +325,19 @@ public class GameManager : MonoBehaviour
 
         bufferView?.Set(conveyor.ToArray());
 
-        var e = new BoxEntity(sub);
-        e.size = size;
-        e.anchor = anchor;
-        PlaceEntity(e, anchor);
+        var en = new BoxEntity(sub);
+        en.size = size;
+        en.anchor = anchor;
+        PlaceEntity(en, anchor);
 
         status = "SPAWNED";
         // Update just the spawned cell immediately, then refresh HUD
         if (cells != null && idx >= 0 && idx < cells.Length)
         {
             var p = IdxToPos(idx);
-            cells[idx].SetCell(grid[idx], p == selector, false, p);
+            var e = grid[idx];
+            var from = (e != null && lastAnchor.TryGetValue(e.id, out var prev)) ? prev : p;
+            cells[idx].SetCell(grid[idx], p == selector, false, p, from);
             RenderHud();
         }
         else
@@ -428,11 +432,17 @@ public class GameManager : MonoBehaviour
         else
         {
             reputation -= 1;
-            status = "WRONG DELIVERY";
+            status = $"WRONG: need {currentOrder.subType}({TraitsToStr(currentOrder.requiredTraits)}) got {box.subType}({TraitsToStr(box.traits)})";
             if (reputation <= minReputation) { GameOver(); return; }
         }
 
+        bool wasHaunted = box.Has(TraitType.Haunted);
+        var spawnPos = box.anchor;
         RemoveEntity(box);
+        if (wasHaunted)
+        {
+            SpawnGhostAt(spawnPos);
+        }
         GenerateNewOrder();
         // no delivery zones
         RenderAll();
@@ -450,6 +460,7 @@ public class GameManager : MonoBehaviour
     // ----------------------------
     void UpdateFireTimers(float dt)
     {
+        bool changed = false;
         foreach (var box in EnumerateEntities())
         {
             if (box == null) continue;
@@ -460,9 +471,11 @@ public class GameManager : MonoBehaviour
                 {
                     box.traits.Remove(TraitType.Fire);
                     status = "FIRE EXPIRED";
+                    changed = true;
                 }
             }
         }
+        if (changed) RenderAll();
     }
 
     // ----------------------------
@@ -533,7 +546,7 @@ public class GameManager : MonoBehaviour
         foreach (var b in EnumerateEntities())
         {
             if (b == null) continue;
-            if (b.Has(TraitType.Sentient) || b.Has(TraitType.Haunted)) movers.Add(b);
+            if (IsGhost(b)) movers.Add(b);
         }
 
         foreach (var mover in movers.OrderBy(_ => rng.Next()))
@@ -553,7 +566,7 @@ public class GameManager : MonoBehaviour
             }
 
             bool isGhost = IsGhost(mover);
-            double moveChance = isGhost ? 0.8 : 0.6;
+            double moveChance = 0.8;
             if (rng.NextDouble() > moveChance) continue;
 
             bool moved = false;
@@ -655,7 +668,7 @@ public class GameManager : MonoBehaviour
                     ghost.fireTimer = Mathf.Max(ghost.fireTimer, target.fireTimer);
                 }
 
-                grid[targetIdx] = null;
+                RemoveEntity(target);
                 state.timer = 0f;
                 state.targetId = null;
                 status = "GHOST MERGE";
@@ -746,6 +759,7 @@ public class GameManager : MonoBehaviour
                     box.AddTrait(tile.tileTrait);
                     grid[tileIdx] = null;
                     status = $"ABSORBED {tile.tileTrait}".ToUpper();
+                    RenderAll();
                 }
 
                 state.timer = 0f;
@@ -802,10 +816,15 @@ public class GameManager : MonoBehaviour
         if (empty.Count == 0) return;
         int idx = empty[rng.Next(0, empty.Count)];
 
+        SpawnGhostAt(IdxToPos(idx));
+    }
+
+    void SpawnGhostAt(Vector2Int anchor)
+    {
+        if (!CanPlaceAt(anchor, Vector2Int.one)) return;
         var ghost = new BoxEntity(ItemSubType.Ghost);
         ghost.size = Vector2Int.one;
-        ghost.AddTrait(TraitType.Sentient);
-        PlaceEntity(ghost, IdxToPos(idx));
+        PlaceEntity(ghost, anchor);
     }
 
     // Optional: keep if you still want periodic status refresh or random events
@@ -925,6 +944,12 @@ public class GameManager : MonoBehaviour
 
             if (!allowPush) return false;
             if (!TryMoveEntityInternal(blocker, dir, true, visited)) return false;
+
+            if (IsGhost(e) && !IsGhost(blocker) && !IsTraitTile(blocker))
+            {
+                blocker.AddTrait(TraitType.Haunted);
+                RenderAll();
+            }
         }
 
         // Move
@@ -941,6 +966,34 @@ public class GameManager : MonoBehaviour
             var e = grid[i];
             if (e == null) continue;
             if (seen.Add(e.id)) yield return e;
+        }
+    }
+
+    string TraitsToStr(IEnumerable<TraitType> traits)
+    {
+        if (traits == null) return "none";
+        var list = traits.Select(t => t.ToString()).ToList();
+        return list.Count == 0 ? "none" : string.Join("+", list);
+    }
+
+    void UpdateAnchorCache()
+    {
+        var alive = new HashSet<string>();
+        foreach (var e in EnumerateEntities())
+        {
+            if (e == null) continue;
+            lastAnchor[e.id] = e.anchor;
+            alive.Add(e.id);
+        }
+
+        if (lastAnchor.Count > 0)
+        {
+            var dead = new List<string>();
+            foreach (var kv in lastAnchor)
+            {
+                if (!alive.Contains(kv.Key)) dead.Add(kv.Key);
+            }
+            foreach (var id in dead) lastAnchor.Remove(id);
         }
     }
 
@@ -962,9 +1015,9 @@ public class GameManager : MonoBehaviour
     List<TraitType> RandomRequiredTraits()
     {
         // Only traits that an order can demand
-        var candidates = new[] { TraitType.Fire, TraitType.Ice, TraitType.Sentient };
-        int max = Mathf.Clamp(maxOrderTraits, 1, candidates.Length);
-        int min = Mathf.Clamp(minOrderTraits, 1, max);
+        var candidates = new[] { TraitType.Fire, TraitType.Ice };
+        int max = Mathf.Clamp(maxOrderTraits, 0, candidates.Length);
+        int min = Mathf.Clamp(minOrderTraits, 0, max);
         int count = rng.Next(min, max + 1);
 
         var set = new HashSet<TraitType>();
@@ -978,7 +1031,7 @@ public class GameManager : MonoBehaviour
 
     TraitType RandomTraitTile()
     {
-        var candidates = new[] { TraitType.Fire, TraitType.Ice, TraitType.Sentient };
+        var candidates = new[] { TraitType.Fire, TraitType.Ice };
         return candidates[rng.Next(0, candidates.Length)];
     }
 
@@ -998,9 +1051,12 @@ public class GameManager : MonoBehaviour
         {
             var p = IdxToPos(i);
             bool selected = (p == selector);
-            cells[i].SetCell(grid[i], selected, false, p);
+            var e = grid[i];
+            var from = (e != null && lastAnchor.TryGetValue(e.id, out var prev)) ? prev : p;
+            cells[i].SetCell(grid[i], selected, false, p, from);
         }
         RenderHud();
+        UpdateAnchorCache();
     }
 
     void RenderHud()

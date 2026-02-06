@@ -56,7 +56,9 @@ public class WantedView : MonoBehaviour
             labelText.text = $"{traitLabel} {subType.ToString().ToUpper()}";
         }
         if (timerText != null) timerText.text = $"{Mathf.CeilToInt(timeLeft)}s";
-        if (narrativeText != null) narrativeText.text = BuildNarrative(subType, requiredTraits);
+        string narrative = BuildNarrative(subType, requiredTraits);
+        if (narrativeText != null) narrativeText.text = narrative;
+        PopUp.Write(narrative);
 
         if (timerFill != null)
         {
@@ -114,7 +116,7 @@ public class WantedView : MonoBehaviour
     {
         if (traits.Contains(TraitType.Fire)) return "slimes";
         if (traits.Contains(TraitType.Ice)) return "sparks";
-        if (traits.Contains(TraitType.Sentient) || traits.Contains(TraitType.Haunted)) return "ghosts";
+        if (traits.Contains(TraitType.Haunted)) return "ghosts";
         return "trouble";
     }
 }

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using DG.Tweening;
 
 public class CellView : MonoBehaviour
 {
@@ -24,15 +25,35 @@ public class CellView : MonoBehaviour
 
     private Button btn;
     private RectTransform rootRect;
+    private Vector2 baseOffset;
+    public float moveTweenSeconds = 0.12f;
+    public Ease moveEase = Ease.OutQuad;
 
     public void Init(System.Action onClick)
     {
         btn = GetComponent<Button>();
         if (btn != null) btn.onClick.AddListener(() => onClick?.Invoke());
         rootRect = GetComponent<RectTransform>();
+
+        if (mainIcon != null)
+        {
+            mainIcon.raycastTarget = false;
+            var c = mainIcon.GetComponent<Canvas>();
+            if (c == null) c = mainIcon.gameObject.AddComponent<Canvas>();
+            c.overrideSorting = true;
+            c.sortingOrder = 10;
+        }
+
+        if (traitIconRow != null)
+        {
+            var rowCanvas = traitIconRow.GetComponent<Canvas>();
+            if (rowCanvas == null) rowCanvas = traitIconRow.gameObject.AddComponent<Canvas>();
+            rowCanvas.overrideSorting = true;
+            rowCanvas.sortingOrder = 20;
+        }
     }
 
-    public void SetCell(BoxEntity e, bool selected, bool isZone, Vector2Int cellPos)
+    public void SetCell(BoxEntity e, bool selected, bool isZone, Vector2Int cellPos, Vector2Int fromPos)
     {
         // Background / outline
         outline.enabled = selected;
@@ -49,32 +70,30 @@ public class CellView : MonoBehaviour
 
         bool isAnchor = e.anchor == cellPos;
 
-        if (e.isTraitTile)
+        if (!isAnchor)
         {
-            if (isAnchor)
-            {
-                mainIcon.enabled = true;
-                mainIcon.sprite = TraitSprite(e.tileTrait);
-                ApplySize(e.size);
-            }
             return;
         }
 
-        if (isAnchor)
+        if (e.isTraitTile)
         {
             mainIcon.enabled = true;
-            mainIcon.sprite = BoxSprite(e.subType);
+            mainIcon.sprite = TraitSprite(e.tileTrait);
             ApplySize(e.size);
+            AnimateMove(cellPos, fromPos);
+            return;
         }
 
-        if (isAnchor)
+        mainIcon.enabled = true;
+        mainIcon.sprite = BoxSprite(e.subType);
+        ApplySize(e.size);
+        AnimateMove(cellPos, fromPos);
+
+        foreach (var t in e.traits)
         {
-            foreach (var t in e.traits)
-            {
-                var img = Instantiate(traitIconPrefab, traitIconRow);
-                img.sprite = TraitSprite(t);
-                img.enabled = true;
-            }
+            var img = Instantiate(traitIconPrefab, traitIconRow);
+            img.sprite = TraitSprite(t);
+            img.enabled = true;
         }
 
     }
@@ -99,7 +118,25 @@ public class CellView : MonoBehaviour
         rt.sizeDelta = new Vector2(w, h);
         float offsetX = (size.x > 1) ? (cellSize.x + spacing.x) * 0.5f : 0f;
         float offsetY = (size.y > 1) ? -(cellSize.y + spacing.y) * 0.5f : 0f;
-        rt.anchoredPosition = new Vector2(offsetX, offsetY);
+        baseOffset = new Vector2(offsetX, offsetY);
+        rt.anchoredPosition = baseOffset;
+    }
+
+    void AnimateMove(Vector2Int cellPos, Vector2Int fromPos)
+    {
+        if (cellPos == fromPos) return;
+
+        var grid = GetComponentInParent<GridLayoutGroup>();
+        if (grid == null) return;
+
+        var delta = fromPos - cellPos;
+        var step = new Vector2(grid.cellSize.x + grid.spacing.x, grid.cellSize.y + grid.spacing.y);
+        var startOffset = baseOffset + new Vector2(delta.x * step.x, -delta.y * step.y);
+
+        var rt = mainIcon.rectTransform;
+        rt.DOKill();
+        rt.anchoredPosition = startOffset;
+        rt.DOAnchorPos(baseOffset, moveTweenSeconds).SetEase(moveEase);
     }
 
     Sprite BoxSprite(ItemSubType st)

@@ -32,27 +32,24 @@ public class PopUp : MonoBehaviour
     public static void Write(string message)
     {
         if (string.IsNullOrEmpty(message)) return;
-        if (instance == null) CreateAuto();
-        instance.Enqueue(message);
-    }
-
-    private void Enqueue(string message)
-    {
-        queue.Enqueue(message);
-        if (runner == null) runner = StartCoroutine(RunQueue());
-    }
-
-    private IEnumerator RunQueue()
-    {
-        while (queue.Count > 0)
+        if (instance == null)
         {
-            string msg = queue.Dequeue();
-            yield return TypeMessage(msg);
-            yield return new WaitForSeconds(holdSeconds);
-            HideInstant();
+            Debug.LogWarning("PopUp.Write called but no PopUp instance exists in scene.");
+            return;
+        }
+        instance.ShowOnce(message);
+    }
+
+    private void ShowOnce(string message)
+    {
+        queue.Clear();
+        if (runner != null)
+        {
+            StopCoroutine(runner);
+            runner = null;
         }
 
-        runner = null;
+        runner = StartCoroutine(TypeMessage(message));
     }
 
     private IEnumerator TypeMessage(string msg)
@@ -66,6 +63,8 @@ public class PopUp : MonoBehaviour
             text.text += msg[i];
             yield return new WaitForSeconds(charDelay);
         }
+
+        runner = null;
     }
 
     private void HideInstant()
@@ -114,9 +113,5 @@ public class PopUp : MonoBehaviour
         text.color = Color.white;
     }
 
-    private static void CreateAuto()
-    {
-        var go = new GameObject("PopUp", typeof(PopUp));
-        instance = go.GetComponent<PopUp>();
-    }
+    // Auto-create removed on request
 }

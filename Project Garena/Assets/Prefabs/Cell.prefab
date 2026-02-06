@@ -195,9 +195,9 @@ RectTransform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 9177288604861638592}
   - {fileID: 2087911753775288486}
   - {fileID: 5742398711942030670}
-  - {fileID: 9177288604861638592}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -230,6 +230,8 @@ MonoBehaviour:
   iceSprite: {fileID: 21300000, guid: c278f3655703e4848a48d534936efa79, type: 3}
   sentientSprite: {fileID: 21300000, guid: 8fd68ee9e70413b44a20811935840de9, type: 3}
   hauntedSprite: {fileID: 21300000, guid: 8fd68ee9e70413b44a20811935840de9, type: 3}
+  moveTweenSeconds: 0.12
+  moveEase: 6
 --- !u!1 &5111166945738807891
 GameObject:
   m_ObjectHideFlags: 0
