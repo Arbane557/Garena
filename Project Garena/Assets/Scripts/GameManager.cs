@@ -2111,6 +2111,7 @@ int Project(Vector2Int p, Vector2Int dir)
     void UseSword(BoxEntity sword)
     {
         var center = sword.anchor;
+        PlaySfx("sword slash");
         SpawnSlashVfx(center);
         StartCoroutine(DoSwordEffect(sword));
     }
@@ -2214,6 +2215,7 @@ int Project(Vector2Int p, Vector2Int dir)
         {
             ExtinguishFireInArea(potion.anchor, radius: 1);
             status = "SPLASH";
+            PlaySfx("bottle break");
             RemoveEntity(potion);
             RenderAll();
             return;
@@ -2223,6 +2225,7 @@ int Project(Vector2Int p, Vector2Int dir)
         if (hasFire) fireImmuneTimer = Mathf.Max(fireImmuneTimer, dur);
         if (hasIce) iceImmuneTimer = Mathf.Max(iceImmuneTimer, dur);
 
+        PlaySfx("bottle break");
         RemoveEntity(potion);
         status = "IMMUNITY UP";
         RenderAll();
@@ -2235,6 +2238,7 @@ int Project(Vector2Int p, Vector2Int dir)
         E = Mathf.Min(E_max_base, E + 10f);
         status = "HEALED";
 
+        PlaySfx("eat");
         RemoveEntity(bread);
         RenderAll();
     }
