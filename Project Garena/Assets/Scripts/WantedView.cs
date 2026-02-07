@@ -58,9 +58,36 @@ public class WantedView : MonoBehaviour
         SetWanted(subType, requiredTraits, timeLeft, timeTotal, null, flavorLine);
     }
 
+    public void ClearWanted()
+    {
+        if (itemIcon != null)
+        {
+            itemIcon.sprite = null;
+            itemIcon.enabled = false;
+            var rt = itemIcon.rectTransform;
+            rt.sizeDelta = baseItemSize;
+            rt.localRotation = baseItemRot;
+        }
+        if (traitIconRow != null)
+        {
+            foreach (Transform c in traitIconRow) Destroy(c.gameObject);
+        }
+        else if (traitIcon != null)
+        {
+            traitIcon.sprite = null;
+        }
+        if (labelText != null) labelText.text = "";
+        if (timerText != null) timerText.text = "";
+        if (narrativeText != null) narrativeText.text = "";
+        if (timerFill != null) timerFill.fillAmount = 0f;
+        lastPopupName = null;
+        lastPopupLine = null;
+    }
+
     public void SetWanted(ItemSubType subType, IReadOnlyList<TraitType> requiredTraits, float timeLeft, float timeTotal, string customerName, string flavorLine)
     {
         if (itemIcon != null) itemIcon.sprite = ItemSprite(subType);
+        if (itemIcon != null) itemIcon.enabled = true;
         ApplyItemIconLayout(subType);
 
         if (traitIconRow != null && traitIconPrefab != null)
