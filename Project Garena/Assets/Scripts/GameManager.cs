@@ -255,6 +255,7 @@ public class GameManager : MonoBehaviour
     private bool[] fireAuraCache;
     private bool[] iceAuraCache;
     private bool[] hauntedAuraCache;
+    private bool[] ghostAuraCache;
     private Dictionary<string, float> iceAuraTime = new Dictionary<string, float>();
     private bool awaitingDialogue = false;
     private bool postOldManLoop = false;
@@ -654,7 +655,8 @@ public class GameManager : MonoBehaviour
             bool inFireAura = fireAuraCache != null && idx >= 0 && idx < fireAuraCache.Length && fireAuraCache[idx];
             bool inIceAura = iceAuraCache != null && idx >= 0 && idx < iceAuraCache.Length && iceAuraCache[idx];
             bool inHauntedAura = hauntedAuraCache != null && idx >= 0 && idx < hauntedAuraCache.Length && hauntedAuraCache[idx];
-            cells[idx].SetCell(grid[idx], p == selector, false, inFireAura, inIceAura, inHauntedAura, p, from);
+            bool inGhostAura = ghostAuraCache != null && idx >= 0 && idx < ghostAuraCache.Length && ghostAuraCache[idx];
+            cells[idx].SetCell(grid[idx], p == selector, false, inFireAura, inIceAura, inHauntedAura, inGhostAura, p, from);
             RenderHud();
         }
         else
@@ -1494,6 +1496,25 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    void BuildGhostAuraCache()
+    {
+        if (ghostAuraCache == null || ghostAuraCache.Length != grid.Length)
+        {
+            ghostAuraCache = new bool[grid.Length];
+        }
+        else
+        {
+            System.Array.Clear(ghostAuraCache, 0, ghostAuraCache.Length);
+        }
+
+        foreach (var e in EnumerateEntities())
+        {
+            if (e == null) continue;
+            if (!IsGhost(e)) continue;
+            if (InBounds(e.anchor)) ghostAuraCache[PosToIdx(e.anchor)] = true;
+        }
+    }
+
     void UpdateFireAuraDamage(float dt)
     {
         if (FireImmune) return;
@@ -1712,7 +1733,11 @@ public class GameManager : MonoBehaviour
                 }
             }
 
-            bool haunted = ApplySentientAuraAt(ghost.anchor);
+            bool haunted = false;
+            if (ghost.activeCooldown <= 0f)
+            {
+                haunted = ApplySentientAuraAt(ghost.anchor);
+            }
             if (haunted)
             {
                 RemoveEntity(ghost);
@@ -2061,9 +2086,14 @@ public class GameManager : MonoBehaviour
 
     void SpawnGhostAt(Vector2Int anchor)
     {
-        if (!CanPlaceAt(anchor, Vector2Int.one)) return;
+        if (!CanPlaceAt(anchor, Vector2Int.one))
+        {
+            TrySpawnGhost();
+            return;
+        }
         var ghost = new BoxEntity(ItemSubType.Ghost);
         ghost.size = Vector2Int.one;
+        ghost.activeCooldown = 1f;
         PlaceEntity(ghost, anchor);
         PlaySfx("haunted");
         PlayGhostSpawnAura(anchor);
@@ -2717,7 +2747,7 @@ int Project(Vector2Int p, Vector2Int dir)
         bool hasIce = potion.Has(TraitType.Ice);
         if (!hasFire && !hasIce)
         {
-            ExtinguishFireInRect(potion.anchor, left: 1, right: 1, up: 1, down: 2);
+            ExtinguishFireInRect(potion.anchor, left: 2, right: 2, up: 2, down: 3);
             status = "SPLASH";
             PlaySfx("bottle break");
             PlayWaterSplash(potion.anchor);
@@ -2832,6 +2862,7 @@ int Project(Vector2Int p, Vector2Int dir)
         BuildFireAuraCache();
         BuildIceAuraCache();
         BuildHauntedAuraCache();
+        BuildGhostAuraCache();
         var selectedAnchor = selector;
         var selEntity = GetSelectedEntity();
         if (selEntity != null) selectedAnchor = selEntity.anchor;
@@ -2844,7 +2875,8 @@ int Project(Vector2Int p, Vector2Int dir)
             bool inFireAura = fireAuraCache != null && fireAuraCache[i];
             bool inIceAura = iceAuraCache != null && iceAuraCache[i];
             bool inHauntedAura = hauntedAuraCache != null && hauntedAuraCache[i];
-            cells[i].SetCell(grid[i], selected, false, inFireAura, inIceAura, inHauntedAura, p, from);
+            bool inGhostAura = ghostAuraCache != null && ghostAuraCache[i];
+            cells[i].SetCell(grid[i], selected, false, inFireAura, inIceAura, inHauntedAura, inGhostAura, p, from);
         }
         RenderHud();
         UpdateAnchorCache();
