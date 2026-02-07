@@ -4100,7 +4100,7 @@ MonoBehaviour:
   peakBarPrefab: {fileID: 0}
   peakBarParent: {fileID: 0}
   peakBarRoot: {fileID: 906933623}
-  interactPointer: {fileID: 0}
+  interactPointer: {fileID: 2018333264}
   wantedView: {fileID: 913630565}
   bufferView: {fileID: 527468256}
   slashPrefab: {fileID: 8380631330012253518, guid: ffdbce68c3996404db67b2f46b86994f, type: 3}
@@ -4302,6 +4302,9 @@ MonoBehaviour:
   canvasGroup: {fileID: 1911440963}
   charDelay: 0.03
   holdSeconds: 1.5
+  minHoldSeconds: 0.25
+  autoAdvanceDialogue: 1
+  advanceOnEnter: 0
 --- !u!225 &1911440963
 CanvasGroup:
   m_ObjectHideFlags: 0
