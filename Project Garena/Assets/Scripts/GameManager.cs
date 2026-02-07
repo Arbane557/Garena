@@ -71,6 +71,7 @@ public class GameManager : MonoBehaviour
 
     [Header("Customers")]
     public List<CustomerLevel> customerLevels = new List<CustomerLevel>();
+    public List<string> mageCycleIds = new List<string>();
     public string tutorialSpeakerName = "Guide";
     [TextArea(2, 6)] public List<string> tutorialBeforeFirst = new List<string>
     {
@@ -107,9 +108,9 @@ public class GameManager : MonoBehaviour
     public float ghostStepLifeSeconds = 1.5f;
 
     [Header("Trait Tiles")]
-    public float traitSpawnInterval = 5.5f;
+    public float traitSpawnInterval = 8.0f;
     public float traitMergeSeconds = 2.0f;
-    [Range(0f, 1f)] public float maxTraitFraction = 0.30f;
+    [Range(0f, 1f)] public float maxTraitFraction = 0.25f;
     [Range(0f, 1f)] public float minEmptyFraction = 0.40f;
 
     [Header("Items")]
@@ -140,7 +141,21 @@ public class GameManager : MonoBehaviour
     public float coldOverload = 20f;
 
     [Header("Fire Aura")]
-    public float fireAuraDamagePerSecond = 6f;
+    public float fireAuraDamagePerSecond = 8f;
+    public string fireHurtSfxId = "fire hurt";
+    public float fireHurtSfxInterval = 0.45f;
+
+    [Header("Ice Aura")]
+    public float iceAuraDamagePerSecond = 4f;
+    public string iceHurtSfxId = "ice hurt";
+    public float iceHurtSfxInterval = 0.6f;
+
+    [Header("Fire Spread (Global)")]
+    public float globalFireSpreadInterval = 14f;
+    [Range(0f, 1f)] public float globalFireSpreadChance = 0.65f;
+    [Header("Ice Spread (Global)")]
+    public float globalIceSpreadInterval = 16f;
+    [Range(0f, 1f)] public float globalIceSpreadChance = 0.65f;
 
     // STATE
     private BoxEntity[] grid;
@@ -192,6 +207,7 @@ public class GameManager : MonoBehaviour
     private float customerFireTimer = 0f;
     private float fireSpreadTimer = 0f;
     private float customerIceTimer = 0f;
+    private float iceSpreadTimer = 0f;
     private float customerGhostTimer = 0f;
     private string currentCustomerFlavor = null;
     private string currentCustomerName = null;
@@ -199,6 +215,9 @@ public class GameManager : MonoBehaviour
     private bool[] iceAuraCache;
     private Dictionary<string, float> iceAuraTime = new Dictionary<string, float>();
     private bool awaitingDialogue = false;
+    private bool postOldManLoop = false;
+    private float fireHurtSfxTimer = 0f;
+    private float iceHurtSfxTimer = 0f;
 
     public List<Ghost> ghosts = new List<Ghost>();
 
@@ -228,6 +247,7 @@ public class GameManager : MonoBehaviour
         EnsureCustomerLevels();
         StartTutorialThenLevel0();
         PlayBgm("BGM");
+        EnsureMageCycleDefaults();
 
         RenderAll();
         RefreshBagBoundary();
@@ -251,6 +271,7 @@ public class GameManager : MonoBehaviour
 
         UpdateLocksAndRegen(Time.deltaTime);
         UpdateFireAuraDamage(Time.deltaTime);
+        UpdateIceAuraDamage(Time.deltaTime);
 
         // Order system
         UpdateOrder(Time.deltaTime);
@@ -258,6 +279,7 @@ public class GameManager : MonoBehaviour
         // Customer level fire gimmick
         UpdateCustomerFire(Time.deltaTime);
         UpdateFireSpread(Time.deltaTime);
+        UpdateIceSpread(Time.deltaTime);
         UpdateCustomerIce(Time.deltaTime);
         UpdateIceAura(Time.deltaTime);
 
@@ -679,8 +701,7 @@ public class GameManager : MonoBehaviour
                 flavorLine = "Bread and blades. I burn through both.",
                 orders = new List<OrderSpec>
                 {
-                    OrderSpec.Of(ItemSubType.Bread),
-                    OrderSpec.Of(ItemSubType.Knife)
+                    OrderSpec.Of(ItemSubType.Bread)
                 },
                 enableChaosSpawns = false,
                 enableFireSpawns = false
@@ -692,14 +713,12 @@ public class GameManager : MonoBehaviour
                 flavorLine = "THE DEAD WANTS TOOLS THAT WON'T OBEY!",
                 orders = new List<OrderSpec>
                 {
-                    OrderSpec.Of(ItemSubType.Knife),
-                    OrderSpec.Of(ItemSubType.WaterBottle),
-                    OrderSpec.Of(ItemSubType.Bread)
+                    OrderSpec.Of(ItemSubType.Knife)
                 },
                 enableChaosSpawns = false,
                 enableGhostSpawns = true,
                 ghostSpawnInterval = 6f,
-                ghostBurstCount = 4
+                ghostBurstCount = 2
             },
             new CustomerLevel
             {
@@ -708,17 +727,15 @@ public class GameManager : MonoBehaviour
                 flavorLine = "Heat it. Temper it. Bring it to me.",
                 orders = new List<OrderSpec>
                 {
-                    OrderSpec.Of(ItemSubType.Bread, TraitType.Fire),
-                    OrderSpec.Of(ItemSubType.Knife, TraitType.Fire),
-                    OrderSpec.Of(ItemSubType.WaterBottle, TraitType.Fire)
+                    OrderSpec.Of(ItemSubType.Bread, TraitType.Fire)
                 },
                 enableChaosSpawns = false,
                 enableFireSpawns = true,
                 fireSpawnInterval = 5f,
-                fireBurstCount = 3,
+                fireBurstCount = 2,
                 enableFireSpread = true,
-                fireSpreadInterval = 8f,
-                fireSpreadChance = 0.25f
+                fireSpreadInterval = 6f,
+                fireSpreadChance = 0.35f
             },
             new CustomerLevel
             {
@@ -727,19 +744,40 @@ public class GameManager : MonoBehaviour
                 flavorLine = "Freeze it. Seal it. Let it linger.",
                 orders = new List<OrderSpec>
                 {
-                    OrderSpec.Of(ItemSubType.Bread, TraitType.Ice),
-                    OrderSpec.Of(ItemSubType.Knife, TraitType.Ice),
-                    OrderSpec.Of(ItemSubType.WaterBottle, TraitType.Ice)
+                    OrderSpec.Of(ItemSubType.Bread, TraitType.Ice)
                 },
                 enableChaosSpawns = false,
                 enableIceSpawns = false,
                 iceSpawnInterval = 8f,
-                iceBurstCount = 10,
+                iceBurstCount = 2,
                 spawnInitialIceBurst = true,
                 enableIceAura = true,
-                iceToItemSeconds = 2f
+                iceToItemSeconds = 1f
+            },
+            new CustomerLevel
+            {
+                id = "old_man",
+                displayName = "Old Man",
+                flavorLine = "You're still here. Then keep up.",
+                orders = new List<OrderSpec>
+                {
+                    OrderSpec.Of(ItemSubType.Knife, TraitType.Fire)
+                },
+                loopOrders = false,
+                enableChaosSpawns = false,
+                enableFireSpawns = false,
+                enableFireSpread = false,
+                enableIceSpawns = false,
+                enableIceAura = false,
+                enableGhostSpawns = false
             }
         };
+    }
+
+    void EnsureMageCycleDefaults()
+    {
+        if (mageCycleIds != null && mageCycleIds.Count > 0) return;
+        mageCycleIds = new List<string> { "traveler", "baker", "fire_mage", "ice_mage", "necromancer" };
     }
 
     void StartTutorialThenLevel0()
@@ -805,7 +843,6 @@ public class GameManager : MonoBehaviour
 
         if (level.enableIceSpawns || level.spawnInitialIceBurst)
         {
-            ClearAllFire();
             int burst = Mathf.Max(1, level.iceBurstCount);
             for (int i = 0; i < burst; i++)
             {
@@ -828,6 +865,23 @@ public class GameManager : MonoBehaviour
         currentCustomerOrderIndex++;
         if (level.orders == null || currentCustomerOrderIndex >= level.orders.Count)
         {
+            if (level.loopOrders)
+            {
+                currentCustomerOrderIndex = 0;
+                GenerateNewOrder();
+                return;
+            }
+            if (level.id == "old_man")
+            {
+                postOldManLoop = true;
+                StartRandomMage();
+                return;
+            }
+            if (postOldManLoop && IsMageLevel(level.id))
+            {
+                StartRandomMage();
+                return;
+            }
             int nextLevel = currentCustomerIndex + 1;
             if (nextLevel < customerLevels.Count)
             {
@@ -839,7 +893,7 @@ public class GameManager : MonoBehaviour
                     PopUp.SetDialogueMode(autoAdvance: true, advanceOnEnter: false);
                     PopUp.WriteSequence(tutorialSpeakerName, tutorialAfterBaker, () =>
                     {
-                        awaitingDialogue = true;
+                        awaitingDialogue = false;
                         PopUp.SetDialogueMode(autoAdvance: true, advanceOnEnter: false);
                         StartCustomerLevel(nextLevel);
                     });
@@ -861,6 +915,32 @@ public class GameManager : MonoBehaviour
         GenerateNewOrder();
     }
 
+    bool IsMageLevel(string id)
+    {
+        if (string.IsNullOrEmpty(id) || mageCycleIds == null) return false;
+        return mageCycleIds.Contains(id);
+    }
+
+    void StartRandomMage()
+    {
+        EnsureMageCycleDefaults();
+        if (mageCycleIds == null || mageCycleIds.Count == 0 || customerLevels == null || customerLevels.Count == 0)
+        {
+            return;
+        }
+
+        var indices = new List<int>();
+        for (int i = 0; i < customerLevels.Count; i++)
+        {
+            var id = customerLevels[i].id;
+            if (mageCycleIds.Contains(id)) indices.Add(i);
+        }
+
+        if (indices.Count == 0) return;
+        int pick = indices[rng.Next(0, indices.Count)];
+        StartCustomerLevel(pick);
+    }
+
     void UpdateCustomerFire(float dt)
     {
         if (awaitingDialogue) return;
@@ -874,8 +954,10 @@ public class GameManager : MonoBehaviour
         {
             customerFireTimer = 0f;
             int burst = Mathf.Max(1, level.fireBurstCount);
+            Debug.Log($"[FireSpawn] Customer={level.id} burst={burst} interval={interval} time={Time.time:F2}");
             for (int i = 0; i < burst; i++)
             {
+                Debug.Log($"[FireSpawn] Attempt {i + 1}/{burst}");
                 TrySpawnTraitTile(TraitType.Fire);
             }
         }
@@ -970,16 +1052,12 @@ public class GameManager : MonoBehaviour
     void UpdateFireSpread(float dt)
     {
         if (awaitingDialogue) return;
-        if (customerLevels == null || customerLevels.Count == 0) return;
-        var level = customerLevels[currentCustomerIndex];
-        if (!level.enableFireSpread) return;
-
-        float interval = Mathf.Max(0.5f, level.fireSpreadInterval);
+        float interval = Mathf.Max(0.5f, globalFireSpreadInterval);
         fireSpreadTimer += dt;
         if (fireSpreadTimer < interval) return;
         fireSpreadTimer = 0f;
 
-        if (rng.NextDouble() > level.fireSpreadChance) return;
+        if (rng.NextDouble() > globalFireSpreadChance) return;
 
         var fireTiles = new List<Vector2Int>();
         foreach (var e in EnumerateEntities())
@@ -1024,17 +1102,63 @@ public class GameManager : MonoBehaviour
             if (!IsTraitTile(target) && !IsGhost(target) && !target.Has(TraitType.Fire))
             {
                 target.AddTrait(TraitType.Fire);
-                target.fireTimer = 2f;
+                target.fireTimer = 1f;
                 PlaySfx("burning");
                 break;
             }
         }
     }
 
-    void ExtinguishFireInArea(Vector2Int center, int radius)
+    void UpdateIceSpread(float dt)
     {
-        for (int dy = -radius; dy <= radius; dy++)
-        for (int dx = -radius; dx <= radius; dx++)
+        if (awaitingDialogue) return;
+        float interval = Mathf.Max(0.5f, globalIceSpreadInterval);
+        iceSpreadTimer += dt;
+        if (iceSpreadTimer < interval) return;
+        iceSpreadTimer = 0f;
+
+        if (rng.NextDouble() > globalIceSpreadChance) return;
+
+        var iceTiles = new List<Vector2Int>();
+        foreach (var e in EnumerateEntities())
+        {
+            if (e == null) continue;
+            if (IsTraitTile(e) && e.tileTrait == TraitType.Ice)
+            {
+                iceTiles.Add(e.anchor);
+            }
+        }
+
+        if (iceTiles.Count == 0) return;
+        var origin = iceTiles[rng.Next(0, iceTiles.Count)];
+        var dirs = new[]
+        {
+            new Vector2Int(1,0), new Vector2Int(-1,0),
+            new Vector2Int(0,1), new Vector2Int(0,-1)
+        };
+        for (int i = 0; i < dirs.Length; i++)
+        {
+            int j = rng.Next(i, dirs.Length);
+            (dirs[i], dirs[j]) = (dirs[j], dirs[i]);
+        }
+
+        foreach (var d in dirs)
+        {
+            var p = origin + d;
+            if (!InBounds(p)) continue;
+            if (grid[PosToIdx(p)] != null) continue;
+            var t = BoxEntity.CreateTraitTile(TraitType.Ice);
+            t.size = Vector2Int.one;
+            PlaceEntity(t, p);
+            PlaySfx("freezed");
+            break;
+        }
+    }
+
+    void ExtinguishFireInRect(Vector2Int center, int left, int right, int up, int down)
+    {
+        for (int dy = -up; dy <= down; dy++)
+        for (int dx = -left; dx <= right; dx++)
         {
             var p = center + new Vector2Int(dx, dy);
             if (!InBounds(p)) continue;
@@ -1053,6 +1177,22 @@ public class GameManager : MonoBehaviour
                 e.fireTimer = 0f;
             }
         }
+    }
+
+    List<BoxEntity> GetEntitiesInRect(Vector2Int center, int left, int right, int up, int down)
+    {
+        var set = new HashSet<string>();
+        var list = new List<BoxEntity>();
+        for (int dy = -up; dy <= down; dy++)
+        for (int dx = -left; dx <= right; dx++)
+        {
+            var p = center + new Vector2Int(dx, dy);
+            if (!InBounds(p)) continue;
+            var b = grid[PosToIdx(p)];
+            if (b == null) continue;
+            if (set.Add(b.id)) list.Add(b);
+        }
+        return list;
     }
 
     void ClearAllFire()
@@ -1145,6 +1285,35 @@ public class GameManager : MonoBehaviour
         if (fireAuraCache != null && idx >= 0 && idx < fireAuraCache.Length && fireAuraCache[idx])
         {
             L_hp = Mathf.Min(L_hp_cap, L_hp + fireAuraDamagePerSecond * dt);
+            if (fireHurtSfxInterval > 0f)
+            {
+                fireHurtSfxTimer -= dt;
+                if (fireHurtSfxTimer <= 0f)
+                {
+                    PlaySfx(fireHurtSfxId);
+                    fireHurtSfxTimer = fireHurtSfxInterval;
+                }
+            }
+        }
+    }
+
+    void UpdateIceAuraDamage(float dt)
+    {
+        if (IceImmune) return;
+        BuildIceAuraCache();
+        int idx = PosToIdx(selector);
+        if (iceAuraCache != null && idx >= 0 && idx < iceAuraCache.Length && iceAuraCache[idx])
+        {
+            L_hp = Mathf.Min(L_hp_cap, L_hp + iceAuraDamagePerSecond * dt);
+            if (iceHurtSfxInterval > 0f)
+            {
+                iceHurtSfxTimer -= dt;
+                if (iceHurtSfxTimer <= 0f)
+                {
+                    PlaySfx(iceHurtSfxId);
+                    iceHurtSfxTimer = iceHurtSfxInterval;
+                }
+            }
         }
     }
 
@@ -1309,10 +1478,17 @@ public class GameManager : MonoBehaviour
                 }
             }
 
-            ApplySentientAuraAt(ghost.anchor);
+            bool haunted = ApplySentientAuraAt(ghost.anchor);
+            if (haunted)
+            {
+                RemoveEntity(ghost);
+            }
             if (moved)
             {
                 SpawnGhostStepVfx(ghost.anchor);
+            }
+            if (moved || haunted)
+            {
                 RenderAll();
             }
         }
@@ -1368,8 +1544,9 @@ public class GameManager : MonoBehaviour
         return new Vector2Int(0, Mathf.Clamp(dy, -1, 1));
     }
 
-    void ApplySentientAuraAt(Vector2Int center)
+    bool ApplySentientAuraAt(Vector2Int center)
     {
+        bool haunted = false;
         for (int dy = -1; dy <= 1; dy++)
         for (int dx = -1; dx <= 1; dx++)
         {
@@ -1381,9 +1558,13 @@ public class GameManager : MonoBehaviour
             if (box == null) continue;
             if (!IsTraitTile(box) && !IsGhost(box))
             {
-                box.traits.Add(TraitType.Sentient);
+                if (box.traits.Add(TraitType.Sentient))
+                {
+                    haunted = true;
+                }
             }
         }
+        return haunted;
     }
 
     void GhostStep(Ghost g)
@@ -1417,6 +1598,7 @@ public class GameManager : MonoBehaviour
         foreach (var mover in movers.OrderBy(_ => rng.Next()))
         {
             if (mover == null) continue;
+            if (mover.anchor == selector) continue; // don't fight the player while held/selected
 
             var p = mover.anchor;
             var dirs = new[] {
@@ -1535,6 +1717,7 @@ public class GameManager : MonoBehaviour
                     status = $"ABSORBED {tile.tileTrait}".ToUpper();
                     if (tile.tileTrait == TraitType.Fire) PlaySfx("fired");
                     else if (tile.tileTrait == TraitType.Ice) PlaySfx("freezed");
+                    RemoveEntity(tile);
                     RenderAll();
                 }
 
@@ -1558,8 +1741,6 @@ public class GameManager : MonoBehaviour
 
     void TrySpawnTraitTile()
     {
-        if (CountTraitTiles() >= Mathf.FloorToInt(grid.Length * maxTraitFraction)) return;
-        if (!HasEmptyCapacity(1)) return;
         var empty = new List<int>();
         for (int i = 0; i < grid.Length; i++)
         {
@@ -1591,7 +1772,29 @@ public class GameManager : MonoBehaviour
             empty.Add(i);
         }
 
-        if (empty.Count == 0) return;
+        if (empty.Count == 0)
+        {
+            if (trait == TraitType.Fire)
+            {
+                var candidates = new List<BoxEntity>();
+                foreach (var e in EnumerateEntities())
+                {
+                    if (e == null) continue;
+                    if (IsTraitTile(e) || IsGhost(e)) continue;
+                    if (e.Has(TraitType.Fire)) continue;
+                    candidates.Add(e);
+                }
+                if (candidates.Count > 0)
+                {
+                    var target = candidates[rng.Next(0, candidates.Count)];
+                    target.AddTrait(TraitType.Fire);
+                    target.fireTimer = 1f;
+                    PlaySfx("burning");
+                    RenderAll();
+                }
+            }
+            return;
+        }
         int idx = empty[rng.Next(0, empty.Count)];
 
         var t = BoxEntity.CreateTraitTile(trait);
@@ -1603,10 +1806,6 @@ public class GameManager : MonoBehaviour
 
     void TrySpawnGhost()
     {
-        int ghostCount = grid.Count(b => IsGhost(b));
-        if (ghostCount >= maxGhosts) return;
-        if (!HasEmptyCapacity(1)) return;
-
         var empty = new List<int>();
         for (int i = 0; i < grid.Length; i++)
         {
@@ -2150,7 +2349,7 @@ int Project(Vector2Int p, Vector2Int dir)
 
         if (sword == null) yield break;
         var center = sword.anchor;
-        var targets = GetEntitiesIn3x3(center);
+        var targets = GetEntitiesInRect(center, left: 1, right: 2, up: 1, down: 1);
         bool hasFire = sword.Has(TraitType.Fire);
         bool hasIce = sword.Has(TraitType.Ice);
         bool destroyAll = hasFire && hasIce;
@@ -2175,7 +2374,7 @@ int Project(Vector2Int p, Vector2Int dir)
             if (IsTraitTile(t))
             {
                 if (hasFire && t.tileTrait == TraitType.Fire) RemoveEntity(t);
-                else if (hasIce && t.tileTrait == TraitType.Ice) RemoveEntity(t);
+                else if (t.tileTrait == TraitType.Ice) RemoveEntity(t);
             }
         }
 
@@ -2240,7 +2439,7 @@ int Project(Vector2Int p, Vector2Int dir)
         bool hasIce = potion.Has(TraitType.Ice);
         if (!hasFire && !hasIce)
         {
-            ExtinguishFireInArea(potion.anchor, radius: 1);
+            ExtinguishFireInRect(potion.anchor, left: 1, right: 1, up: 1, down: 2);
             status = "SPLASH";
             PlaySfx("bottle break");
             RemoveEntity(potion);
@@ -2933,10 +3132,10 @@ int Project(Vector2Int p, Vector2Int dir)
         public float fireSpawnInterval = 8f;
         public int fireBurstCount = 1;
         public bool enableFireSpread = false;
-        public float fireSpreadInterval = 4f;
+        public float fireSpreadInterval = 6f;
         [Range(0f, 1f)] public float fireSpreadChance = 0.4f;
         public bool enableIceSpawns = false;
-        public float iceSpawnInterval = 8f;
+        public float iceSpawnInterval = 6f;
         public int iceBurstCount = 1;
         public bool spawnInitialIceBurst = false;
         public bool enableIceAura = false;
@@ -2944,6 +3143,7 @@ int Project(Vector2Int p, Vector2Int dir)
         public bool enableGhostSpawns = false;
         public float ghostSpawnInterval = 6f;
         public int ghostBurstCount = 0;
+        public bool loopOrders = false;
     }
 
     [Serializable]
