@@ -5,6 +5,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.InputSystem;
 using TMPro;
+using Template.Audio;
+using Template.Core;
 
 public class GameManager : MonoBehaviour
 {
@@ -91,6 +93,7 @@ public class GameManager : MonoBehaviour
         InitConveyor();
         InitInitialTraits();      // optional (spawns initial traits on boxes if you want, else remove)
         GenerateNewOrder();
+        PlayBgm("BGM");
 
         RenderAll();
     }
@@ -428,11 +431,13 @@ public class GameManager : MonoBehaviour
         {
             reputation += 5;
             status = "ORDER FULFILLED";
+            PlaySfx("submitsuccess");
         }
         else
         {
             reputation -= 1;
             status = $"WRONG: need {currentOrder.subType}({TraitsToStr(currentOrder.requiredTraits)}) got {box.subType}({TraitsToStr(box.traits)})";
+            PlaySfx("submitwrong");
             if (reputation <= minReputation) { GameOver(); return; }
         }
 
@@ -759,6 +764,8 @@ public class GameManager : MonoBehaviour
                     box.AddTrait(tile.tileTrait);
                     grid[tileIdx] = null;
                     status = $"ABSORBED {tile.tileTrait}".ToUpper();
+                    if (tile.tileTrait == TraitType.Fire) PlaySfx("fired");
+                    else if (tile.tileTrait == TraitType.Ice) PlaySfx("freezed");
                     RenderAll();
                 }
 
@@ -1124,5 +1131,15 @@ int Project(Vector2Int p, Vector2Int dir)
         }
 
         bufferView?.Set(conveyor.ToArray());
+    }
+
+    void PlaySfx(string id)
+    {
+        ServiceHub.Get<AudioManager>()?.PlaySfx(id);
+    }
+
+    void PlayBgm(string id)
+    {
+        ServiceHub.Get<AudioManager>()?.PlayBgm(id);
     }
 }
