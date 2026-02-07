@@ -61,6 +61,22 @@ public class GameManager : MonoBehaviour
     [Range(0, 3)] public int minOrderTraits = 1;
     [Range(0, 3)] public int maxOrderTraits = 2;
 
+    [Header("Progression")]
+    public int ordersBeforeChaos = 7;
+    public int initialItemCount = 18;
+    public bool spawnInitialItems = true;
+    public bool spawnInitialTraits = false;
+    public bool allowTraitTilesBeforeChaos = false;
+    public bool allowGhostsBeforeChaos = false;
+    public bool forceFirstChaosOrder = true;
+    public int initialSpawnBottomRows = 3;
+    public int initialSpawnClusterRadius = 2;
+    public Image chaosTint;
+    public float chaosTintAlpha = 0.25f;
+    public float chaosTintFlashSeconds = 0.35f;
+    public float chaosTraitSpawnDelay = 8f;
+    public float chaosGhostSpawnDelay = 8f;
+
     [Header("Ghosts")]
     public int maxGhosts = 4;
     public float ghostSpawnInterval = 2.5f;
@@ -128,6 +144,10 @@ public class GameManager : MonoBehaviour
     private float glitchTimer = 0f;
     public float glitchInterval = 6f;
     [Range(0f, 1f)] public float glitchChance = 0.08f;
+    private int ordersCompleted = 0;
+    private bool chaosUnlocked = false;
+    private bool chaosOrderPending = false;
+    private float chaosTimer = 0f;
 
     public List<Ghost> ghosts = new List<Ghost>();
 
@@ -151,6 +171,8 @@ public class GameManager : MonoBehaviour
         BuildGridUI();
         InitDeliveryZones();
         InitConveyor();
+        if (spawnInitialItems) InitInitialItems();
+        if (spawnInitialTraits) InitInitialTraits();      // optional (spawns initial traits on boxes if you want, else remove)
         GenerateNewOrder();
         PlayBgm("BGM");
 
@@ -193,20 +215,23 @@ public class GameManager : MonoBehaviour
         }
 
         // Timed spawns
-        if (ghostSpawnInterval > 0f)
+        if (ghostSpawnInterval > 0f && (chaosUnlocked || allowGhostsBeforeChaos))
         {
+            if (chaosUnlocked) chaosTimer += Time.deltaTime;
             ghostSpawnTimer += Time.deltaTime;
-            if (ghostSpawnTimer >= ghostSpawnInterval)
+            bool ghostDelayOk = !chaosUnlocked || chaosTimer >= chaosGhostSpawnDelay;
+            if (ghostDelayOk && ghostSpawnTimer >= ghostSpawnInterval)
             {
                 ghostSpawnTimer -= ghostSpawnInterval;
                 TrySpawnGhost();
             }
         }
 
-        if (traitSpawnInterval > 0f)
+        if (traitSpawnInterval > 0f && (chaosUnlocked || allowTraitTilesBeforeChaos))
         {
             traitSpawnTimer += Time.deltaTime;
-            if (traitSpawnTimer >= traitSpawnInterval)
+            bool traitDelayOk = !chaosUnlocked || chaosTimer >= chaosTraitSpawnDelay;
+            if (traitDelayOk && traitSpawnTimer >= traitSpawnInterval)
             {
                 traitSpawnTimer -= traitSpawnInterval;
                 TrySpawnTraitTile();
@@ -281,6 +306,30 @@ public class GameManager : MonoBehaviour
             var t = BoxEntity.CreateTraitTile(RandomTraitTile());
             t.size = Vector2Int.one;
             PlaceEntity(t, p);
+            spawned++;
+        }
+    }
+
+    void InitInitialItems()
+    {
+        int spawned = 0;
+        int attempts = 0;
+        int bottomRows = Mathf.Clamp(initialSpawnBottomRows, 1, gridSize);
+        var clusterCenter = new Vector2Int(rng.Next(0, gridSize), rng.Next(gridSize - bottomRows, gridSize));
+        while (spawned < initialItemCount && attempts < grid.Length * 6)
+        {
+            attempts++;
+            var sub = RandomItemType();
+            var size = GetSizeForSubType(sub);
+            int cx = clusterCenter.x + rng.Next(-initialSpawnClusterRadius, initialSpawnClusterRadius + 1);
+            int cy = clusterCenter.y + rng.Next(-initialSpawnClusterRadius, initialSpawnClusterRadius + 1);
+            var anchor = new Vector2Int(Mathf.Clamp(cx, 0, gridSize - 1), Mathf.Clamp(cy, gridSize - bottomRows, gridSize - 1));
+            if (IsDeliveryZone(anchor)) continue;
+            if (!CanPlaceAt(anchor, size)) continue;
+
+            var e = new BoxEntity(sub);
+            e.size = size;
+            PlaceEntity(e, anchor);
             spawned++;
         }
     }
@@ -510,7 +559,20 @@ public class GameManager : MonoBehaviour
 
     void GenerateNewOrder()
     {
-        var traits = RandomRequiredTraits();
+        if (chaosOrderPending)
+        {
+            chaosOrderPending = false;
+            currentOrder = new Order
+            {
+                subType = ItemSubType.Knife,
+                requiredTraits = new List<TraitType> { TraitType.Fire },
+                timeLeft = orderLifetime
+            };
+            wantedView?.SetWanted(currentOrder.subType, currentOrder.requiredTraits, currentOrder.timeLeft, orderLifetime);
+            return;
+        }
+
+        var traits = chaosUnlocked ? RandomRequiredTraits() : new List<TraitType>();
         currentOrder = new Order
         {
             subType = RandomItemType(),
@@ -543,6 +605,12 @@ public class GameManager : MonoBehaviour
             L_hp = Mathf.Max(0f, L_hp - healGood);
             status = "ORDER FULFILLED";
             PlaySfx("submitsuccess");
+
+            ordersCompleted++;
+            if (!chaosUnlocked && ordersCompleted >= ordersBeforeChaos)
+            {
+                TriggerChaos();
+            }
         }
         else
         {
@@ -560,7 +628,11 @@ public class GameManager : MonoBehaviour
         {
             SpawnGhostAt(spawnPos);
         }
-        if (rng.NextDouble() < 0.1)
+        if (chaosOrderPending)
+        {
+            GenerateNewOrder();
+        }
+        else if (rng.NextDouble() < 0.1)
         {
             status = "CUSTOMER CHANGED MIND";
         }
@@ -854,9 +926,33 @@ public class GameManager : MonoBehaviour
         if (empty.Count == 0) return;
         int idx = empty[rng.Next(0, empty.Count)];
 
-        var t = BoxEntity.CreateTraitTile(RandomTraitTile());
+        var trait = RandomTraitTile();
+        var t = BoxEntity.CreateTraitTile(trait);
         t.size = Vector2Int.one;
         PlaceEntity(t, IdxToPos(idx));
+        if (trait == TraitType.Fire) PlaySfx("burning");
+        else if (trait == TraitType.Ice) PlaySfx("freezed");
+    }
+
+    void TrySpawnTraitTile(TraitType trait)
+    {
+        var empty = new List<int>();
+        for (int i = 0; i < grid.Length; i++)
+        {
+            if (grid[i] != null) continue;
+            var p = IdxToPos(i);
+            if (IsDeliveryZone(p)) continue;
+            empty.Add(i);
+        }
+
+        if (empty.Count == 0) return;
+        int idx = empty[rng.Next(0, empty.Count)];
+
+        var t = BoxEntity.CreateTraitTile(trait);
+        t.size = Vector2Int.one;
+        PlaceEntity(t, IdxToPos(idx));
+        if (trait == TraitType.Fire) PlaySfx("burning");
+        else if (trait == TraitType.Ice) PlaySfx("freezed");
     }
 
     void TrySpawnGhost()
@@ -886,6 +982,7 @@ public class GameManager : MonoBehaviour
         var ghost = new BoxEntity(ItemSubType.Ghost);
         ghost.size = Vector2Int.one;
         PlaceEntity(ghost, anchor);
+        PlaySfx("haunted");
     }
 
     // Optional: keep if you still want periodic status refresh or random events
@@ -1276,6 +1373,23 @@ int Project(Vector2Int p, Vector2Int dir)
         }
 
         return set.ToList();
+    }
+
+    void TriggerChaos()
+    {
+        chaosUnlocked = true;
+        chaosOrderPending = forceFirstChaosOrder;
+        chaosTimer = 0f;
+        ScreenShake.Shake(0.35f, 14f, 24);
+        if (chaosTint != null)
+        {
+            var c = chaosTint.color;
+            chaosTint.DOKill();
+            chaosTint.color = new Color(c.r, c.g, c.b, 0f);
+            chaosTint.DOColor(new Color(c.r, c.g, c.b, chaosTintAlpha), chaosTintFlashSeconds * 0.5f)
+                .SetLoops(2, LoopType.Yoyo);
+        }
+        TrySpawnTraitTile(TraitType.Fire);
     }
 
     TraitType RandomTraitTile()

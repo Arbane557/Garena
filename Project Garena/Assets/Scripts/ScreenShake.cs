@@ -1,5 +1,6 @@
 using UnityEngine;
 using DG.Tweening;
+using System.Linq;
 
 public class ScreenShake : MonoBehaviour
 {
@@ -24,6 +25,20 @@ public class ScreenShake : MonoBehaviour
         if (cam == null)
         {
             cam = Camera.main != null ? Camera.main.transform : null;
+            if (cam == null)
+            {
+                var cameras = FindObjectsOfType<Camera>();
+                if (cameras != null && cameras.Length > 0)
+                {
+                    var active = cameras.FirstOrDefault(c => c != null && c.enabled);
+                    cam = (active != null ? active : cameras[0]).transform;
+                }
+            }
+            if (cam == null)
+            {
+                var canvas = FindObjectOfType<Canvas>();
+                cam = canvas != null ? canvas.transform : null;
+            }
         }
         if (cam != null) basePos = cam.localPosition;
     }
