@@ -223,10 +223,10 @@ MonoBehaviour:
   traitIconPrefab: {fileID: 1491960634412083393, guid: b7fdd049fb406464182ae7c586632612, type: 3}
   outline: {fileID: 3952280633453454103}
   useInspectorColors: 1
-  normalBgColor: {r: 0.15686275, g: 0.13333334, b: 0.3647059, a: 1}
+  normalBgColor: {r: 0.15686275, g: 0.13333334, b: 0.3647059, a: 0.42745098}
   zoneBgColor: {r: 1, g: 1, b: 1, a: 0.4}
-  IceAuraColor: {r: 0.5801887, g: 1, b: 0.98119223, a: 0.39607844}
-  FireAuraColor: {r: 1, g: 0.337255, b: 0.33725488, a: 0.49803922}
+  IceAuraColor: {r: 0.5801887, g: 1, b: 0.98119223, a: 0.2901961}
+  FireAuraColor: {r: 1, g: 0.337255, b: 0.33725488, a: 0.2901961}
   breadSprite: {fileID: 21300000, guid: c5eb435f9bc17524ea754997c5f9610c, type: 3}
   knifeSprite: {fileID: 21300000, guid: 76e3019793f0ddc40a0df95fbc587e07, type: 3}
   waterBottleSprite: {fileID: 21300000, guid: d3f2e87195a00b04d89dd10b601d9239, type: 3}
@@ -235,6 +235,30 @@ MonoBehaviour:
   iceSprite: {fileID: -7560284153744367771, guid: cebdd181591681743bdc53f6c0ca4e73, type: 3}
   sentientSprite: {fileID: 21300000, guid: aff924d8775855c4b8a68346c3800e1f, type: 3}
   hauntedSprite: {fileID: 21300000, guid: a5b4534dad2e3fc42b0e962786192b27, type: 3}
+  ghostFrames:
+  - {fileID: 21300000, guid: 55563bdc550abfe4ba699951e7b7b55a, type: 3}
+  - {fileID: 21300000, guid: 618e494dff728914e832d27a6f006d89, type: 3}
+  - {fileID: 21300000, guid: 1f3a7b4a512c2aa44b265286429f36e0, type: 3}
+  - {fileID: 21300000, guid: bfdffe0981d41684f866a84338adf0a4, type: 3}
+  - {fileID: 21300000, guid: 64ab35d7094e1a743b5675302f642093, type: 3}
+  - {fileID: 21300000, guid: 86ab5f6fb95860e42b3d9d068b9fdb04, type: 3}
+  - {fileID: 21300000, guid: 8ec539d3ed8c779439ad4810dd84b57b, type: 3}
+  - {fileID: 21300000, guid: 21b4b0927df2066499aef9ebbe0efd09, type: 3}
+  ghostFps: 10
+  fireFrames:
+  - {fileID: 21300000, guid: f5a37e42f4f999d4faf29be20fb4332a, type: 3}
+  - {fileID: 21300000, guid: 594c98d945d0fbf4c88d0297ecdc1abf, type: 3}
+  - {fileID: 21300000, guid: e8a36bdd3ebde544e812bffc58b235f7, type: 3}
+  - {fileID: 21300000, guid: 1819b3be1601a094ab8edb30453d66e5, type: 3}
+  - {fileID: 21300000, guid: 83525bc20da710d4594f9f2aeb8ee75a, type: 3}
+  fireFps: 10
+  iceFrames:
+  - {fileID: 21300000, guid: b6e9f69c11fc7704cac4b87c611d80da, type: 3}
+  - {fileID: 21300000, guid: e409d5cfc20ba7541af50520a3cf4cbf, type: 3}
+  - {fileID: 21300000, guid: e7a1aa43a51d34740b242ede87d81045, type: 3}
+  - {fileID: 21300000, guid: b92d6fe9082b4e341b361691158821c2, type: 3}
+  - {fileID: 21300000, guid: 9017293f7d59b484db92e6d7e1bd0d77, type: 3}
+  iceFps: 10
   moveTweenSeconds: 0.12
   moveEase: 6
   popScale: 0.12
