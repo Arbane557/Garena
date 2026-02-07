@@ -64,7 +64,7 @@ public class WantedView : MonoBehaviour
         if (labelText != null)
         {
             var traitLabel = (requiredTraits.Count == 0)
-                ? "NONE"
+                ? "JUST"
                 : string.Join("+", requiredTraits.Select(t => t.ToString().ToUpper()));
             labelText.text = $"{traitLabel} {subType.ToString().ToUpper()}";
         }

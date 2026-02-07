@@ -451,13 +451,13 @@ public class GameManager : MonoBehaviour
             var box = grid[idx];
             if (box != null && !IsTraitTile(box) && !IsGhost(box) && IsAtTopBoundary(box))
             {
-                if (!frozen && TrySpendEnergy(costSubmit)) AttemptSubmit(box, true);
-                else if (frozen) ConsumeFrozenAttempt();
+                if (!frozen) AttemptSubmit(box, true);
+                else ConsumeFrozenAttempt();
             }
             else if (grid[idx] == null)
             {
-                if (!frozen && TrySpendEnergy(costSubmit)) SpawnBoxAtSelector();
-                else if (frozen) ConsumeFrozenAttempt();
+                if (!frozen) SpawnBoxAtSelector();
+                else ConsumeFrozenAttempt();
             }
             else
             {
@@ -476,12 +476,6 @@ public class GameManager : MonoBehaviour
         int curIdx = PosToIdx(selector);
         var box = grid[curIdx];
         if (box == null) return;
-
-        if (!TrySpendEnergy(GetPushCost(box)))
-        {
-            status = "EXHAUSTED";
-            return;
-        }
 
         if (IsGhost(box))
         {
@@ -528,11 +522,6 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        if (steps > 1)
-        {
-            TrySpendEnergy(costPerSlide * (steps - 1));
-        }
-
         // Keep selector following the moved box (anchor position)
         selector = box.anchor;
         status = box.Has(TraitType.Ice) ? "SLID" : "MOVED";
@@ -559,11 +548,6 @@ public class GameManager : MonoBehaviour
         var en = new BoxEntity(sub);
         en.size = size;
         en.anchor = anchor;
-        if (rng.NextDouble() < 0.2)
-        {
-            en.AddTrait(RandomTraitTile());
-            status = "GLITCHED ITEM";
-        }
         PlaceEntity(en, anchor);
 
         status = "SPAWNED";
@@ -1584,8 +1568,10 @@ public class GameManager : MonoBehaviour
         bool holdingFire = sel != null && sel.Has(TraitType.Fire) && !FireImmune;
         bool holdingIce = sel != null && sel.Has(TraitType.Ice) && !IceImmune;
 
-        heat = Mathf.Clamp(heat + (holdingFire ? heatBuildRate : -heatRecoverRate) * dt, 0f, heatMax);
-        cold = Mathf.Clamp(cold + (holdingIce ? coldBuildRate : -coldRecoverRate) * dt, 0f, coldMax);
+        heat = heat + (holdingFire ? heatBuildRate : -heatRecoverRate) * dt;
+        cold = cold + (holdingIce ? coldBuildRate : -coldRecoverRate) * dt;
+        if (heat < 0f) heat = 0f;
+        if (cold < 0f) cold = 0f;
 
         L_heat = heat;
         L_cold = cold;
