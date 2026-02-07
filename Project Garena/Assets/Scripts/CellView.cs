@@ -12,6 +12,13 @@ public class CellView : MonoBehaviour
 
     public Outline outline;
 
+    [Header("Background")]
+    public bool useInspectorColors = true;
+    public Color normalBgColor = new Color(0.12f, 0.12f, 0.12f, 1f);
+    public Color zoneBgColor = new Color(0.1f, 0.3f, 0.1f, 0.4f);
+    public Color IceAuraColor;
+    public Color FireAuraColor;
+
     // Assign sprites in Inspector
     public Sprite breadSprite;
     public Sprite knifeSprite;
@@ -44,6 +51,23 @@ public class CellView : MonoBehaviour
         if (btn != null) btn.onClick.AddListener(() => onClick?.Invoke());
         rootRect = GetComponent<RectTransform>();
 
+        if (background == null)
+        {
+            background = GetComponent<Image>();
+        }
+        if (background == null)
+        {
+            background = gameObject.AddComponent<Image>();
+            background.color = new Color(0f, 0f, 0f, 0f);
+        }
+        background.raycastTarget = true;
+        var cg = GetComponent<CanvasGroup>();
+        if (cg != null)
+        {
+            cg.blocksRaycasts = true;
+            cg.interactable = true;
+        }
+
         if (mainIcon != null)
         {
             mainIcon.raycastTarget = false;
@@ -64,16 +88,15 @@ public class CellView : MonoBehaviour
 
     public void SetCell(BoxEntity e, bool selected, bool isZone, bool inFireAura, bool inIceAura, Vector2Int cellPos, Vector2Int fromPos)
     {
-        // Background / outline
         outline.enabled = selected;
 
-        // zone tint (simple)
-        if (isZone) background.color = new Color(0.1f, 0.3f, 0.1f, 0.4f);
-        else if (inFireAura) background.color = new Color(0.35f, 0.08f, 0.04f, 1f);
-        else if (inIceAura) background.color = new Color(0.08f, 0.18f, 0.35f, 1f);
-        else background.color = new Color(0.12f, 0.12f, 0.12f, 1f);
+        if (useInspectorColors && background != null)
+        {
+            background.color = isZone ? zoneBgColor : normalBgColor;
+        }
+        if (inFireAura) background.color = FireAuraColor;
+        else if (inIceAura) background.color = IceAuraColor;
 
-        // Clear
         mainIcon.enabled = false;
         foreach (Transform c in traitIconRow) Destroy(c.gameObject);
 
@@ -118,7 +141,6 @@ public class CellView : MonoBehaviour
             img.enabled = true;
         }
 
-        // Pop on first reveal or entity change
         if (!hadEntity || lastEntityId != e.id)
         {
             var rt = mainIcon.rectTransform;
@@ -127,7 +149,6 @@ public class CellView : MonoBehaviour
             rt.DOPunchScale(Vector3.one * popScale, popDuration, 10, 0.6f);
         }
 
-        // Pulse trait row when trait count increases
         int traitCount = e.traits != null ? e.traits.Count : 0;
         if (lastEntityId == e.id && traitCount > lastTraitCount && traitIconRow != null)
         {
@@ -140,7 +161,6 @@ public class CellView : MonoBehaviour
             }
         }
 
-        // Selection pulse
         if (selected && !wasSelected && rootRect != null)
         {
             rootRect.DOKill();

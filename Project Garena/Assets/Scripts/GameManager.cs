@@ -4,6 +4,10 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.InputSystem;
+using UnityEngine.EventSystems;
+#if ENABLE_INPUT_SYSTEM
+using UnityEngine.InputSystem.UI;
+#endif
 using TMPro;
 using DG.Tweening;
 using Template.Audio;
@@ -33,6 +37,9 @@ public class GameManager : MonoBehaviour
     public float peakBarWidth = 420f;
     public float peakBarHeight = 18f;
     public bool peakBarVertical = false;
+    public GameObject peakBarPrefab;
+    public RectTransform peakBarParent;
+    public RectTransform peakBarRoot;
 
     public WantedView wantedView;
     public BufferView bufferView;
@@ -161,9 +168,21 @@ public class GameManager : MonoBehaviour
     private float iceImmuneTimer = 0f;
     private float frozenTimer = 0f;
     private int frozenMoves = 0;
+    private bool physicsMode = false;
+    public float physicsGravity = 8.5f;
+    public float physicsMass = 5.0f;
+    public float physicsImpulse = 14f;
+    public float physicsScatterAngle = 60f;
+    public float physicsModeDuration = 12f;
+    private int lastScreenW = -1;
+    private int lastScreenH = -1;
+    public RectTransform bagBoundary;
+    [Range(0.02f, 0.5f)] public float autoSubmitBand = 0.12f;
     private float glitchTimer = 0f;
     public float glitchInterval = 6f;
     [Range(0f, 1f)] public float glitchChance = 0.08f;
+    private float physicsModeTimer = 0f;
+    private int ordersCompleted = 0;
     private bool chaosUnlocked = false;
     private float chaosTimer = 0f;
     private int currentCustomerIndex = 0;
@@ -196,6 +215,7 @@ public class GameManager : MonoBehaviour
         grid = new BoxEntity[gridSize * gridSize];
         E = E_max_base;
         BuildPeakBarIfMissing();
+        EnsureUIForDragging();
 
         BuildGridUI();
         InitDeliveryZones();
@@ -207,6 +227,7 @@ public class GameManager : MonoBehaviour
         PlayBgm("BGM");
 
         RenderAll();
+        RefreshBagBoundary();
     }
 
     void Update()
@@ -291,6 +312,25 @@ public class GameManager : MonoBehaviour
             WorldTick();
         }
 
+        if (Screen.width != lastScreenW || Screen.height != lastScreenH)
+        {
+            lastScreenW = Screen.width;
+            lastScreenH = Screen.height;
+            if (physicsMode) RefreshPhysicsColliders();
+            RefreshBagBoundary();
+        }
+
+        if (physicsMode)
+        {
+            physicsModeTimer -= Time.deltaTime;
+            if (physicsModeTimer <= 0f)
+            {
+                physicsMode = false;
+                SetPhysicsMode(false);
+                status = "PHYSICS ENDED";
+            }
+        }
+
         RenderHud();
     }
 
@@ -299,6 +339,11 @@ public class GameManager : MonoBehaviour
     // ----------------------------
     void BuildGridUI()
     {
+        if (gridParent == null || cellPrefab == null) return;
+        for (int i = gridParent.childCount - 1; i >= 0; i--)
+        {
+            Destroy(gridParent.GetChild(i).gameObject);
+        }
         cells = new CellView[gridSize * gridSize];
         for (int i = 0; i < gridSize * gridSize; i++)
         {
@@ -405,6 +450,12 @@ public class GameManager : MonoBehaviour
 
         if (!frozen && kb.eKey.wasPressedThisFrame) UseSelected();
         else if (frozen && kb.eKey.wasPressedThisFrame) ConsumeFrozenAttempt();
+
+        if (kb.jKey.wasPressedThisFrame)
+        {
+            physicsMode = !physicsMode;
+            SetPhysicsMode(physicsMode);
+        }
 
         // Enter: submit if pushing above top edge; otherwise spawn if empty
         if (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame)
@@ -1119,6 +1170,39 @@ public class GameManager : MonoBehaviour
         AdvanceCustomerOrder();
         // no delivery zones
         RenderAll();
+    }
+
+    public void AutoCorrectSubmit(BoxEntity box)
+    {
+        if (box == null) return;
+        if (IsTraitTile(box) || IsGhost(box)) return;
+
+        reputation += 5;
+        L_hp = Mathf.Max(0f, L_hp - healGood);
+        status = "AUTO CORRECT";
+        PlaySfx("submitsuccess");
+
+        ordersCompleted++;
+        if (!chaosUnlocked && ordersCompleted >= ordersBeforeChaos)
+        {
+            TriggerChaos();
+        }
+
+        bool wasHaunted = box.Has(TraitType.Haunted);
+        var spawnPos = box.anchor;
+        RemoveEntity(box);
+        if (wasHaunted) SpawnGhostAt(spawnPos);
+        GenerateNewOrder();
+
+        if (physicsMode)
+        {
+            DisableCellsForEntity(box);
+            RenderHud();
+        }
+        else
+        {
+            RenderAll();
+        }
     }
 
     void GameOver()
@@ -2175,6 +2259,7 @@ int Project(Vector2Int p, Vector2Int dir)
     // ----------------------------
     void RenderAll()
     {
+        if (physicsMode) return;
         BuildFireAuraCache();
         BuildIceAuraCache();
         for (int i = 0; i < grid.Length; i++)
@@ -2233,6 +2318,291 @@ int Project(Vector2Int p, Vector2Int dir)
         UpdateEnergyUI();
     }
 
+    void DisableCellsForEntity(BoxEntity e)
+    {
+        if (cells == null || e == null) return;
+        for (int dy = 0; dy < e.size.y; dy++)
+        for (int dx = 0; dx < e.size.x; dx++)
+        {
+            var p = new Vector2Int(e.anchor.x + dx, e.anchor.y + dy);
+            int idx = PosToIdx(p);
+            if (idx < 0 || idx >= cells.Length) continue;
+            var cv = cells[idx];
+            if (cv != null) cv.gameObject.SetActive(false);
+        }
+    }
+
+    public BoxEntity GetEntityAtPos(Vector2Int p)
+    {
+        if (!InBounds(p)) return null;
+        return grid[PosToIdx(p)];
+    }
+
+    public bool IsPhysicsMode => physicsMode;
+
+    public bool IsInAutoSubmitZoneWorld(Vector3 worldPos)
+    {
+        if (bagBoundary == null) return false;
+        var corners = new Vector3[4];
+        bagBoundary.GetWorldCorners(corners);
+        float top = corners[1].y;
+        float bottom = corners[0].y;
+        float band = (top - bottom) * Mathf.Clamp01(autoSubmitBand);
+        return worldPos.y >= (top - band);
+    }
+
+    void SetPhysicsMode(bool on)
+    {
+        if (on) EnsureUIForDragging();
+        var gridLayout = gridParent != null ? gridParent.GetComponent<GridLayoutGroup>() : null;
+        if (gridLayout != null) gridLayout.enabled = !on;
+        if (!on)
+        {
+            BuildGridUI();
+            RenderAll();
+            return;
+        }
+
+        int dragCount = 0;
+        var used = new HashSet<string>();
+        for (int i = 0; i < grid.Length; i++)
+        {
+            var cv = cells[i];
+            if (cv == null) continue;
+
+            var e = grid[i];
+            bool isItem = e != null && !IsTraitTile(e) && !IsGhost(e) && e.anchor == IdxToPos(i);
+            if (e != null && used.Contains(e.id))
+            {
+                // Always keep both cells of 2x1 items visible
+                if (on)
+                {
+                    cv.gameObject.SetActive(true);
+                    SetupDragHandle(cv, IdxToPos(i));
+                    dragCount++;
+                }
+                continue;
+            }
+
+            if (on)
+            {
+                if (!isItem)
+                {
+                    cv.gameObject.SetActive(false);
+                    continue;
+                }
+
+                cv.gameObject.SetActive(true);
+                if (e != null) used.Add(e.id);
+                var go = cv.gameObject;
+                var rb = go.GetComponent<Rigidbody2D>();
+                if (rb == null) rb = go.AddComponent<Rigidbody2D>();
+                rb.gravityScale = physicsGravity;
+                rb.mass = physicsMass;
+                rb.simulated = true;
+                rb.linearDamping = 0f;
+                rb.angularDamping = 0.5f;
+                rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+                rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+
+                var col = go.GetComponent<BoxCollider2D>();
+                if (col == null) col = go.AddComponent<BoxCollider2D>();
+
+                float angle = UnityEngine.Random.Range(-physicsScatterAngle, physicsScatterAngle);
+                Vector2 dir = Quaternion.Euler(0f, 0f, angle) * Vector2.down;
+                rb.AddForce(dir * physicsImpulse, ForceMode2D.Impulse);
+                rb.AddTorque(UnityEngine.Random.Range(-physicsImpulse, physicsImpulse) * 0.5f, ForceMode2D.Impulse);
+
+                // Attach adjacent cells of multi-cell items to the anchor cell
+                if (e != null && e.size.x * e.size.y > 1)
+                {
+                    for (int dy = 0; dy < e.size.y; dy++)
+                    for (int dx = 0; dx < e.size.x; dx++)
+                    {
+                        var p = new Vector2Int(e.anchor.x + dx, e.anchor.y + dy);
+                        int ci = PosToIdx(p);
+                        if (ci < 0 || ci >= cells.Length) continue;
+                        if (p == e.anchor) continue;
+                        var child = cells[ci];
+                        if (child == null) continue;
+                        child.gameObject.SetActive(true);
+                        child.transform.SetParent(go.transform, true);
+
+                        var childRb = child.GetComponent<Rigidbody2D>();
+                        if (childRb != null) Destroy(childRb);
+                        var childCol = child.GetComponent<BoxCollider2D>();
+                        if (childCol != null) Destroy(childCol);
+                    }
+                }
+
+                UpdateColliderForItem(go, e);
+                SetupDragHandle(cv, IdxToPos(i));
+                dragCount++;
+            }
+            else
+            {
+                cv.gameObject.SetActive(true);
+                var go = cv.gameObject;
+                var rb = go.GetComponent<Rigidbody2D>();
+                if (rb != null) Destroy(rb);
+                var col = go.GetComponent<BoxCollider2D>();
+                if (col != null) Destroy(col);
+                var dh = go.GetComponent<PhysicsDragHandle>();
+                if (dh != null) Destroy(dh);
+            }
+        }
+
+        if (!on) RenderAll();
+        if (on)
+        {
+            lastScreenW = Screen.width;
+            lastScreenH = Screen.height;
+            RefreshPhysicsColliders();
+            RefreshBagBoundary();
+            Debug.Log($"[Drag] Physics mode ON. Drag handles attached: {dragCount}");
+            physicsModeTimer = Mathf.Max(0.1f, physicsModeDuration);
+        }
+    }
+
+    void SetupDragHandle(CellView cv, Vector2Int pos)
+    {
+        if (cv == null) return;
+        var dh = cv.GetComponent<PhysicsDragHandle>();
+        if (dh == null) dh = cv.gameObject.AddComponent<PhysicsDragHandle>();
+        dh.Init(this, pos, bagBoundary, autoSubmitBand);
+    }
+
+    void EnsureUIForDragging()
+    {
+        var canvas = FindObjectOfType<Canvas>();
+        if (canvas != null)
+        {
+            var gr = canvas.GetComponent<GraphicRaycaster>();
+            if (gr == null) canvas.gameObject.AddComponent<GraphicRaycaster>();
+            Debug.Log($"[Drag] Canvas found: {canvas.name} (renderMode={canvas.renderMode})");
+        }
+
+        var es = FindObjectOfType<EventSystem>();
+        if (es == null)
+        {
+            var go = new GameObject("EventSystem");
+            es = go.AddComponent<EventSystem>();
+        }
+
+#if ENABLE_INPUT_SYSTEM
+        if (es.GetComponent<InputSystemUIInputModule>() == null)
+        {
+            es.gameObject.AddComponent<InputSystemUIInputModule>();
+        }
+        var sim = es.GetComponent<StandaloneInputModule>();
+        if (sim != null) Destroy(sim);
+        Debug.Log("[Drag] Using InputSystemUIInputModule");
+#else
+        if (es.GetComponent<StandaloneInputModule>() == null)
+        {
+            es.gameObject.AddComponent<StandaloneInputModule>();
+        }
+        Debug.Log("[Drag] Using StandaloneInputModule");
+#endif
+    }
+
+    void RefreshPhysicsColliders()
+    {
+        if (cells == null) return;
+        for (int i = 0; i < grid.Length; i++)
+        {
+            var cv = cells[i];
+            if (cv == null) continue;
+            var e = grid[i];
+            if (e == null || IsTraitTile(e) || IsGhost(e)) continue;
+            if (e.anchor != IdxToPos(i)) continue;
+            UpdateColliderForItem(cv.gameObject, e);
+        }
+    }
+
+    void UpdateColliderForItem(GameObject go, BoxEntity e)
+    {
+        if (go == null || e == null) return;
+        var col = go.GetComponent<BoxCollider2D>();
+        if (col == null) col = go.AddComponent<BoxCollider2D>();
+
+        var bounds = new Bounds();
+        bool hasBounds = false;
+
+        for (int dy = 0; dy < e.size.y; dy++)
+        for (int dx = 0; dx < e.size.x; dx++)
+        {
+            var p = new Vector2Int(e.anchor.x + dx, e.anchor.y + dy);
+            int ci = PosToIdx(p);
+            if (ci < 0 || ci >= cells.Length) continue;
+            var cell = cells[ci];
+            if (cell == null) continue;
+            var rt = cell.GetComponent<RectTransform>();
+            if (rt == null) continue;
+
+            var corners = new Vector3[4];
+            rt.GetWorldCorners(corners);
+            for (int k = 0; k < 4; k++)
+            {
+                var local = go.transform.InverseTransformPoint(corners[k]);
+                if (!hasBounds)
+                {
+                    bounds = new Bounds(local, Vector3.zero);
+                    hasBounds = true;
+                }
+                else
+                {
+                    bounds.Encapsulate(local);
+                }
+            }
+        }
+
+        if (hasBounds)
+        {
+            col.offset = bounds.center;
+            col.size = bounds.size;
+        }
+    }
+
+    void RefreshBagBoundary()
+    {
+        if (bagBoundary == null) return;
+
+        var rb = bagBoundary.GetComponent<Rigidbody2D>();
+        if (rb == null) rb = bagBoundary.gameObject.AddComponent<Rigidbody2D>();
+        rb.bodyType = RigidbodyType2D.Static;
+
+        var rect = bagBoundary.rect;
+        var xMin = rect.xMin;
+        var xMax = rect.xMax;
+        var yMin = rect.yMin;
+        var yMax = rect.yMax;
+
+        SetEdge(bagBoundary, "BagEdgeTop", new Vector2(xMin, yMax), new Vector2(xMax, yMax));
+        SetEdge(bagBoundary, "BagEdgeBottom", new Vector2(xMin, yMin), new Vector2(xMax, yMin));
+        SetEdge(bagBoundary, "BagEdgeLeft", new Vector2(xMin, yMin), new Vector2(xMin, yMax));
+        SetEdge(bagBoundary, "BagEdgeRight", new Vector2(xMax, yMin), new Vector2(xMax, yMax));
+    }
+
+    void SetEdge(RectTransform parent, string name, Vector2 a, Vector2 b)
+    {
+        var t = parent.Find(name);
+        GameObject go;
+        if (t == null)
+        {
+            go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+        }
+        else
+        {
+            go = t.gameObject;
+        }
+
+        var edge = go.GetComponent<EdgeCollider2D>();
+        if (edge == null) edge = go.AddComponent<EdgeCollider2D>();
+        edge.points = new[] { a, b };
+    }
+
     void UpdateEnergyUI()
     {
         float L_total = Mathf.Clamp(L_hp + L_weight + L_heat + L_cold, 0f, E_max_base);
@@ -2276,6 +2646,23 @@ int Project(Vector2Int p, Vector2Int dir)
         if (energyFill != null && hpLockFill != null && weightLockFill != null && heatLockFill != null && coldLockFill != null)
             return;
 
+        if (peakBarRoot != null)
+        {
+            AssignPeakBarRefs(peakBarRoot);
+            return;
+        }
+
+        if (peakBarPrefab != null)
+        {
+            var parent = peakBarParent != null ? peakBarParent : FindObjectOfType<Canvas>()?.transform as RectTransform;
+            if (parent != null)
+            {
+                var inst = Instantiate(peakBarPrefab, parent);
+                AssignPeakBarRefs(inst.transform);
+                return;
+            }
+        }
+
         var canvas = FindObjectOfType<Canvas>();
         if (canvas == null) return;
 
@@ -2318,6 +2705,24 @@ int Project(Vector2Int p, Vector2Int dir)
         coldLockFill = CreateFill(root.transform, "ColdLock", new Color(0.2f, 0.6f, 1f, 1f), 2);
         hpLockFill = CreateFill(root.transform, "HpLock", new Color(1f, 0.6f, 0.2f, 1f), 3);
         weightLockFill = CreateFill(root.transform, "WeightLock", new Color(0.5f, 0.5f, 0.5f, 1f), 4);
+    }
+
+    void AssignPeakBarRefs(Transform root)
+    {
+        if (root == null) return;
+        energyFill = FindImage(root, "Energy");
+        heatLockFill = FindImage(root, "Hot");
+        coldLockFill = FindImage(root, "Ice");
+        hpLockFill = FindImage(root, "HP");
+        weightLockFill = FindImage(root, "Weight");
+    }
+
+    Image FindImage(Transform root, string name)
+    {
+        if (root == null) return null;
+        var t = root.Find(name);
+        if (t == null) return null;
+        return t.GetComponent<Image>();
     }
 
     Image CreateFill(Transform parent, string name, Color color, int order)

@@ -39,7 +39,7 @@ Material:
     - _BottomFade: 0.25
     - _Flicker: 0.25
     - _GlobalFade: 1
-    - _Intensity: 0.11
+    - _Intensity: 0.17
     - _NoiseScale: 8
     - _NoiseStrength: 0.06
     - _Opacity: 0.628
