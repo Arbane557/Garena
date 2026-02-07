@@ -60,8 +60,8 @@ public class BufferView : MonoBehaviour
                 rt.localRotation = baseRot;
                 break;
             case ItemSubType.WaterBottle:
-                rt.sizeDelta = new Vector2(baseSize.x * 0.5f, baseSize.y);
-                rt.localRotation = Quaternion.Euler(0f, 0f, -30f);
+                rt.sizeDelta = baseSize;
+                rt.localRotation = baseRot;
                 break;
             default:
                 rt.sizeDelta = baseSize;

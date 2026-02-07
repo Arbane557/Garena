@@ -1,0 +1,64 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: HOLY NOVA
+  m_Shader: {fileID: 4800000, guid: d8968278d6f3a6f48ae2c0b50c93260f, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _MainTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _AuroraFluctuation: 2
+    - _AuroraIntensity: 2.5
+    - _AuroraScale: 12
+    - _AuroraSpeed: 0.6
+    - _BeamCenterX: 0.5
+    - _BeamSoftness: 0.12
+    - _BeamWidth: 0.18
+    - _BottomFade: 0.25
+    - _Flicker: 0.25
+    - _GlobalFade: 1
+    - _Intensity: 0.11
+    - _NoiseScale: 8
+    - _NoiseStrength: 0.06
+    - _Opacity: 0.628
+    - _PixelSize: 203
+    - _SparkleBrightness: 3
+    - _SparkleDensity: 50
+    - _SparkleFlicker: 0.96
+    - _SparkleSize: 0.006
+    - _SparkleSpeed: 0.14
+    - _SparkleTrail: 0.015
+    - _Speed: 0.25
+    - _StarBrightness: 0
+    - _StarDensity: 1
+    - _StarSize: 0.001
+    - _StarSpeed: 0
+    - _TopFade: 0.05
+    m_Colors:
+    - _AuroraColor: {r: 1, g: 0.9, b: 0.34999996, a: 1}
+    - _BeamTint: {r: 1, g: 0.9, b: 0.24999997, a: 1}
+    - _Color: {r: 1, g: 1, b: 1, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

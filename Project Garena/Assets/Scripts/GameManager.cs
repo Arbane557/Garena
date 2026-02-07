@@ -32,6 +32,7 @@ public class GameManager : MonoBehaviour
     public Image coldLockFill;
     public float peakBarWidth = 420f;
     public float peakBarHeight = 18f;
+    public bool peakBarVertical = false;
 
     public WantedView wantedView;
     public BufferView bufferView;
@@ -62,12 +63,14 @@ public class GameManager : MonoBehaviour
 
     [Header("Ghosts")]
     public int maxGhosts = 4;
-    public float ghostSpawnInterval = 4.0f;
+    public float ghostSpawnInterval = 2.5f;
     public float ghostMergeSeconds = 2.0f;
 
     [Header("Trait Tiles")]
-    public float traitSpawnInterval = 3.0f;
+    public float traitSpawnInterval = 5.5f;
     public float traitMergeSeconds = 2.0f;
+    [Range(0f, 1f)] public float maxTraitFraction = 0.30f;
+    [Range(0f, 1f)] public float minEmptyFraction = 0.40f;
 
     [Header("Items")]
     public float itemSpawnInterval = 5.0f;
@@ -148,7 +151,6 @@ public class GameManager : MonoBehaviour
         BuildGridUI();
         InitDeliveryZones();
         InitConveyor();
-        InitInitialTraits();      // optional (spawns initial traits on boxes if you want, else remove)
         GenerateNewOrder();
         PlayBgm("BGM");
 
@@ -182,7 +184,13 @@ public class GameManager : MonoBehaviour
         // Ghosts: timed movement
         UpdateGhosts(Time.deltaTime);
 
-        // Ghost movement is handled in UpdateGhosts with tickRateSeconds cadence.
+        // Sentient movement (timed, like ghosts)
+        sentientTickTimer += Time.deltaTime;
+        if (sentientTickTimer >= sentientTickInterval)
+        {
+            sentientTickTimer -= sentientTickInterval;
+            SentientTick();
+        }
 
         // Timed spawns
         if (ghostSpawnInterval > 0f)
@@ -259,9 +267,12 @@ public class GameManager : MonoBehaviour
     {
         int spawned = 0;
         int attempts = 0;
+        int maxTraits = Mathf.FloorToInt(grid.Length * maxTraitFraction);
         while (spawned < initialTraitCount && attempts < grid.Length * 4)
         {
             attempts++;
+            if (CountTraitTiles() >= maxTraits) break;
+            if (!HasEmptyCapacity(1)) break;
             int idx = rng.Next(0, grid.Length);
             var p = IdxToPos(idx);
             if (IsDeliveryZone(p)) continue;
@@ -624,39 +635,35 @@ public class GameManager : MonoBehaviour
                 (dirs[k], dirs[swap]) = (dirs[swap], dirs[k]);
             }
 
+            bool moved = false;
             foreach (var d in dirs)
             {
                 if (TryMoveEntity(ghost, d, allowPush: false))
                 {
+                    moved = true;
                     break;
                 }
             }
+
+            ApplySentientAuraAt(ghost.anchor);
+            if (moved) RenderAll();
         }
     }
 
-    void ApplyGhostAura(Ghost g)
+    void ApplySentientAuraAt(Vector2Int center)
     {
         for (int dy = -1; dy <= 1; dy++)
         for (int dx = -1; dx <= 1; dx++)
         {
-            var p = g.pos + new Vector2Int(dx, dy);
+            var p = center + new Vector2Int(dx, dy);
             if (!InBounds(p)) continue;
 
             int idx = PosToIdx(p);
             var box = grid[idx];
             if (box == null) continue;
-
-            if (g.type == GhostType.Base)
+            if (!IsTraitTile(box) && !IsGhost(box))
             {
-                box.traits.Add(TraitType.Haunted);
-            }
-            else if (g.type == GhostType.FireGhost)
-            {
-                box.AddTrait(TraitType.Fire);
-            }
-            else if (g.type == GhostType.IceFast)
-            {
-                box.traits.Add(TraitType.Ice);
+                box.traits.Add(TraitType.Sentient);
             }
         }
     }
@@ -684,8 +691,10 @@ public class GameManager : MonoBehaviour
         foreach (var b in EnumerateEntities())
         {
             if (b == null) continue;
-            // Ghost movement is timer-based in UpdateGhosts, not here.
+            if (b.Has(TraitType.Sentient)) movers.Add(b);
         }
+
+        if (movers.Count == 0) return;
 
         foreach (var mover in movers.OrderBy(_ => rng.Next()))
         {
@@ -703,9 +712,7 @@ public class GameManager : MonoBehaviour
                 (dirs[k], dirs[swap]) = (dirs[swap], dirs[k]);
             }
 
-            bool isGhost = IsGhost(mover);
-            double moveChance = 0.8;
-            if (rng.NextDouble() > moveChance) continue;
+            if (rng.NextDouble() > 0.5) continue;
 
             bool moved = false;
             foreach (var d in dirs)
@@ -716,14 +723,6 @@ public class GameManager : MonoBehaviour
                 int ni = PosToIdx(np);
                 if (grid[ni] != null)
                 {
-                    if (isGhost)
-                    {
-                        if (TryMoveEntity(mover, d, allowPush: true))
-                        {
-                            moved = true;
-                            break;
-                        }
-                    }
                     continue;
                 }
 
@@ -734,7 +733,10 @@ public class GameManager : MonoBehaviour
                 }
             }
 
-            if (moved) continue;
+            if (moved)
+            {
+                RenderAll();
+            }
         }
     }
 
@@ -838,6 +840,8 @@ public class GameManager : MonoBehaviour
 
     void TrySpawnTraitTile()
     {
+        if (CountTraitTiles() >= Mathf.FloorToInt(grid.Length * maxTraitFraction)) return;
+        if (!HasEmptyCapacity(1)) return;
         var empty = new List<int>();
         for (int i = 0; i < grid.Length; i++)
         {
@@ -859,6 +863,7 @@ public class GameManager : MonoBehaviour
     {
         int ghostCount = grid.Count(b => IsGhost(b));
         if (ghostCount >= maxGhosts) return;
+        if (!HasEmptyCapacity(1)) return;
 
         var empty = new List<int>();
         for (int i = 0; i < grid.Length; i++)
@@ -933,10 +938,38 @@ public class GameManager : MonoBehaviour
         };
     }
 
+    int CountTraitTiles()
+    {
+        int count = 0;
+        for (int i = 0; i < grid.Length; i++)
+        {
+            if (IsTraitTile(grid[i])) count++;
+        }
+        return count;
+    }
+
+    bool HasEmptyCapacity(int needed)
+    {
+        int empty = 0;
+        for (int i = 0; i < grid.Length; i++)
+        {
+            if (grid[i] == null) empty++;
+        }
+        int minEmpty = Mathf.CeilToInt(grid.Length * minEmptyFraction);
+        return (empty - needed) >= minEmpty;
+    }
+
     void UpdateLocksAndRegen(float dt)
     {
         // Weight lock from fullness
         float filled = grid.Count(e => e != null);
+        int traitCount = 0;
+        foreach (var e in EnumerateEntities())
+        {
+            if (e == null || IsTraitTile(e) || IsGhost(e)) continue;
+            traitCount += (e.traits != null) ? e.traits.Count : 0;
+        }
+        filled += traitCount;
         float total = grid.Length;
         float F = (total <= 0f) ? 0f : filled / total;
         float w = Smoothstep(weightStart, weightEnd, F);
@@ -1431,31 +1464,10 @@ int Project(Vector2Int p, Vector2Int dir)
 
     void UseBread(BoxEntity bread)
     {
-        bool hasFire = bread.Has(TraitType.Fire);
-        bool hasIce = bread.Has(TraitType.Ice);
-
-        if (!hasFire && !hasIce)
-        {
-            L_hp = Mathf.Max(0f, L_hp - 15f);
-            E = Mathf.Min(E_max_base, E + 10f);
-            status = "HEALED";
-        }
-        else if (hasFire && !hasIce)
-        {
-            AddHeatBuildup(12f);
-            status = "BURNED";
-        }
-        else if (hasIce && !hasFire)
-        {
-            ApplyFreezeMoves(3);
-            status = "FROZEN";
-        }
-        else
-        {
-            AddHeatBuildup(10f);
-            ApplyFreezeMoves(2);
-            status = "SHOCK";
-        }
+        // Bread always heals regardless of traits.
+        L_hp = Mathf.Max(0f, L_hp - 15f);
+        E = Mathf.Min(E_max_base, E + 10f);
+        status = "HEALED";
 
         RemoveEntity(bread);
         RenderAll();
@@ -1600,11 +1612,11 @@ int Project(Vector2Int p, Vector2Int dir)
         float L_total = Mathf.Clamp(L_hp + L_weight + L_heat + L_cold, 0f, E_max_base);
         float green = Mathf.Max(0f, E_max_base - L_total);
 
-        SetSegmentWidth(energyFill, green);
-        SetSegmentWidth(heatLockFill, L_heat);
-        SetSegmentWidth(coldLockFill, L_cold);
-        SetSegmentWidth(hpLockFill, L_hp);
-        SetSegmentWidth(weightLockFill, L_weight);
+        SetSegmentSize(energyFill, green);
+        SetSegmentSize(heatLockFill, L_heat);
+        SetSegmentSize(coldLockFill, L_cold);
+        SetSegmentSize(hpLockFill, L_hp);
+        SetSegmentSize(weightLockFill, L_weight);
 
         if (L_total >= E_max_base)
         {
@@ -1613,20 +1625,23 @@ int Project(Vector2Int p, Vector2Int dir)
         }
     }
 
-    void SetSegmentWidth(Image img, float value)
+    void SetSegmentSize(Image img, float value)
     {
         if (img == null) return;
         float pct = (E_max_base <= 0f) ? 0f : Mathf.Clamp01(value / E_max_base);
         var le = img.GetComponent<LayoutElement>();
         if (le != null)
         {
-            le.preferredWidth = peakBarWidth * pct;
+            le.preferredWidth = peakBarVertical ? peakBarWidth : peakBarWidth * pct;
+            le.preferredHeight = peakBarVertical ? peakBarHeight * pct : peakBarHeight;
             le.minWidth = 0f;
         }
         var rt = img.rectTransform;
         if (rt != null)
         {
-            rt.sizeDelta = new Vector2(peakBarWidth * pct, peakBarHeight);
+            rt.sizeDelta = peakBarVertical
+                ? new Vector2(peakBarWidth, peakBarHeight * pct)
+                : new Vector2(peakBarWidth * pct, peakBarHeight);
         }
     }
 
@@ -1650,13 +1665,26 @@ int Project(Vector2Int p, Vector2Int dir)
         var bg = root.AddComponent<Image>();
         bg.color = new Color(0.08f, 0.08f, 0.12f, 0.9f);
 
-        var layout = root.AddComponent<HorizontalLayoutGroup>();
-        layout.spacing = 0f;
-        layout.childAlignment = TextAnchor.MiddleLeft;
-        layout.childControlWidth = false;
-        layout.childControlHeight = false;
-        layout.childForceExpandWidth = false;
-        layout.childForceExpandHeight = false;
+        if (peakBarVertical)
+        {
+            var layout = root.AddComponent<VerticalLayoutGroup>();
+            layout.spacing = 0f;
+            layout.childAlignment = TextAnchor.UpperCenter;
+            layout.childControlWidth = false;
+            layout.childControlHeight = false;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+        }
+        else
+        {
+            var layout = root.AddComponent<HorizontalLayoutGroup>();
+            layout.spacing = 0f;
+            layout.childAlignment = TextAnchor.MiddleLeft;
+            layout.childControlWidth = false;
+            layout.childControlHeight = false;
+            layout.childForceExpandWidth = false;
+            layout.childForceExpandHeight = false;
+        }
 
         // Order: green, hot, freeze, hp, weight
         energyFill = CreateFill(root.transform, "EnergyFill", new Color(0.2f, 0.85f, 0.35f, 1f), 0);

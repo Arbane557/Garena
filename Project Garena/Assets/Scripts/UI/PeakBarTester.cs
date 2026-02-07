@@ -22,8 +22,16 @@ public class PeakBarTester : MonoBehaviour
 
     public bool autoClamp = true;
 
+    void Awake()
+    {
+        AutoAssignIfMissing();
+        EnsureLayout();
+    }
+
     void OnValidate()
     {
+        AutoAssignIfMissing();
+        EnsureLayout();
         UpdateBar();
     }
 
@@ -54,6 +62,31 @@ public class PeakBarTester : MonoBehaviour
         SetSegment(weightLockFill, L_weight);
     }
 
+    void AutoAssignIfMissing()
+    {
+        if (energyFill == null) energyFill = FindImage("Energy");
+        if (heatLockFill == null) heatLockFill = FindImage("Hot");
+        if (coldLockFill == null) coldLockFill = FindImage("Ice");
+        if (hpLockFill == null) hpLockFill = FindImage("HP");
+        if (weightLockFill == null) weightLockFill = FindImage("Weight");
+    }
+
+    Image FindImage(string name)
+    {
+        var t = transform.Find(name);
+        if (t == null) return null;
+        return t.GetComponent<Image>();
+    }
+
+    void EnsureLayout()
+    {
+        var rt = GetComponent<RectTransform>();
+        if (rt != null)
+        {
+            rt.sizeDelta = new Vector2(barWidth, barHeight);
+        }
+    }
+
     void SetSegment(Image img, float value)
     {
         if (img == null) return;
@@ -63,6 +96,12 @@ public class PeakBarTester : MonoBehaviour
         {
             le.preferredWidth = barWidth * pct;
             le.minWidth = 0f;
+            le.preferredHeight = barHeight;
+        }
+        else
+        {
+            le = img.gameObject.AddComponent<LayoutElement>();
+            le.preferredWidth = barWidth * pct;
             le.preferredHeight = barHeight;
         }
         var rt = img.rectTransform;
