@@ -103,6 +103,10 @@ public class GameManager : MonoBehaviour
     {
         "Have you tried pouring water on those lava blocks?"
     };
+    [TextArea(2, 6)] public List<string> tutorialAtNecromancer = new List<string>
+    {
+        "Press E to use the item you’re holding."
+    };
 
     [Header("Progression")]
     public int ordersBeforeChaos = 7;
@@ -170,6 +174,22 @@ public class GameManager : MonoBehaviour
     public string iceHurtSfxId = "ice hurt";
     public float iceHurtSfxInterval = 0.6f;
 
+    [Header("Use VFX")]
+    public Color waterSplashColor = new Color(0.2f, 0.55f, 1f, 1f);
+    public float waterSplashInSeconds = 0.06f;
+    public float waterSplashHoldSeconds = 0.12f;
+    public float waterSplashOutSeconds = 0.22f;
+    public float waterSplashMaxDelay = 0.08f;
+    [Range(0f, 1f)] public float waterSplashExtraChance = 0.12f;
+    public int waterSplashExtraLeft = 1;
+    public int waterSplashExtraRight = 1;
+    public int waterSplashExtraUp = 1;
+    public int waterSplashExtraDown = 1;
+    public Color swordFlashColor = Color.white;
+    public float swordFlashOnSeconds = 0.08f;
+    public float swordFlashOffSeconds = 0.08f;
+    public float swordFlashOnSeconds2 = 0.06f;
+
     [Header("Fire Spread (Global)")]
     public float globalFireSpreadInterval = 14f;
     [Range(0f, 1f)] public float globalFireSpreadChance = 0.65f;
@@ -233,10 +253,12 @@ public class GameManager : MonoBehaviour
     private string currentCustomerName = null;
     private bool[] fireAuraCache;
     private bool[] iceAuraCache;
+    private bool[] hauntedAuraCache;
     private Dictionary<string, float> iceAuraTime = new Dictionary<string, float>();
     private bool awaitingDialogue = false;
     private bool postOldManLoop = false;
     private bool shownAfterIceDialogue = false;
+    private bool shownNecromancerUseTutorial = false;
     private float fireHurtSfxTimer = 0f;
     private float iceHurtSfxTimer = 0f;
     private bool interactTutorialUsed = false;
@@ -626,10 +648,12 @@ public class GameManager : MonoBehaviour
             var e = grid[idx];
             var from = (e != null && lastAnchor.TryGetValue(e.id, out var prev)) ? prev : p;
             BuildFireAuraCache();
-            bool inFireAura = fireAuraCache != null && idx >= 0 && idx < fireAuraCache.Length && fireAuraCache[idx];
             BuildIceAuraCache();
+            BuildHauntedAuraCache();
+            bool inFireAura = fireAuraCache != null && idx >= 0 && idx < fireAuraCache.Length && fireAuraCache[idx];
             bool inIceAura = iceAuraCache != null && idx >= 0 && idx < iceAuraCache.Length && iceAuraCache[idx];
-            cells[idx].SetCell(grid[idx], p == selector, false, inFireAura, inIceAura, p, from);
+            bool inHauntedAura = hauntedAuraCache != null && idx >= 0 && idx < hauntedAuraCache.Length && hauntedAuraCache[idx];
+            cells[idx].SetCell(grid[idx], p == selector, false, inFireAura, inIceAura, inHauntedAura, p, from);
             RenderHud();
         }
         else
@@ -740,6 +764,7 @@ public class GameManager : MonoBehaviour
                 flavorLine = "Bread and blades. I burn through both.",
                 orders = new List<OrderSpec>
                 {
+                    OrderSpec.Of(ItemSubType.Bread),
                     OrderSpec.Of(ItemSubType.Bread)
                 },
                 enableChaosSpawns = false,
@@ -833,9 +858,15 @@ public class GameManager : MonoBehaviour
         Debug.Log($"[Customer] Start {level.id}");
         currentCustomerFlavor = level.flavorLine;
         currentCustomerName = level.displayName;
-        interactTutorialUsed = false;
         UpdateInteractTutorial();
         UpdatePortalsForLevel(level);
+
+        if (level.id == "necromancer" && !shownNecromancerUseTutorial)
+        {
+            shownNecromancerUseTutorial = true;
+            interactTutorialUsed = false;
+            UpdateInteractTutorial();
+        }
 
         chaosUnlocked = level.enableChaosSpawns;
         chaosTimer = 0f;
@@ -895,6 +926,11 @@ public class GameManager : MonoBehaviour
         if (level.orders == null || currentCustomerOrderIndex >= level.orders.Count)
         {
             Debug.Log($"[Customer] Complete {level.id}");
+            if (level.id == "necromancer")
+            {
+                interactTutorialUsed = true;
+                UpdateInteractTutorial();
+            }
             if (level.loopOrders)
             {
                 currentCustomerOrderIndex = 0;
@@ -1269,6 +1305,84 @@ public class GameManager : MonoBehaviour
         return list;
     }
 
+    List<Vector2Int> GetPositionsInRect(Vector2Int center, int left, int right, int up, int down)
+    {
+        var list = new List<Vector2Int>();
+        for (int dy = -up; dy <= down; dy++)
+        for (int dx = -left; dx <= right; dx++)
+        {
+            var p = center + new Vector2Int(dx, dy);
+            if (!InBounds(p)) continue;
+            list.Add(p);
+        }
+        return list;
+    }
+
+    void PlayWaterSplash(Vector2Int center)
+    {
+        if (cells == null) return;
+        var positions = new HashSet<Vector2Int>();
+        foreach (var p in GetPositionsInRect(center, left: 1, right: 1, up: 1, down: 2))
+            positions.Add(p);
+
+        var extra = GetPositionsInRect(center,
+            left: 1 + waterSplashExtraLeft,
+            right: 1 + waterSplashExtraRight,
+            up: 1 + waterSplashExtraUp,
+            down: 2 + waterSplashExtraDown);
+        foreach (var p in extra)
+        {
+            if (positions.Contains(p)) continue;
+            if (rng.NextDouble() < waterSplashExtraChance)
+                positions.Add(p);
+        }
+
+        foreach (var p in positions)
+        {
+            int idx = PosToIdx(p);
+            if (idx < 0 || idx >= cells.Length) continue;
+            float delay = (float)(rng.NextDouble() * waterSplashMaxDelay);
+            cells[idx]?.PlaySplash(waterSplashColor, waterSplashInSeconds, waterSplashHoldSeconds, waterSplashOutSeconds, delay);
+        }
+    }
+
+    void PlaySwordFlash(Vector2Int center)
+    {
+        if (cells == null) return;
+        foreach (var p in GetPositionsInRect(center, left: 1, right: 2, up: 1, down: 1))
+        {
+            int idx = PosToIdx(p);
+            if (idx < 0 || idx >= cells.Length) continue;
+            cells[idx]?.PlayFlash(swordFlashColor, swordFlashOnSeconds, swordFlashOffSeconds, swordFlashOnSeconds2);
+        }
+    }
+
+    void PlayGhostSpawnAura(Vector2Int center)
+    {
+        if (cells == null) return;
+        var color = new Color(0.45f, 0.1f, 0.6f, 1f);
+        foreach (var p in GetPositionsInRect(center, left: 1, right: 1, up: 1, down: 1))
+        {
+            int idx = PosToIdx(p);
+            if (idx < 0 || idx >= cells.Length) continue;
+            float delay = (float)(rng.NextDouble() * 0.05f);
+            cells[idx]?.PlaySplash(color, 0.05f, 0.08f, 0.18f, delay);
+        }
+    }
+
+    void PlayGhostHauntAura(Vector2Int center)
+    {
+        if (cells == null) return;
+        var color = new Color(0.55f, 0.15f, 0.7f, 1f);
+        foreach (var p in GetPositionsInRect(center, left: 1, right: 1, up: 1, down: 1))
+        {
+            int idx = PosToIdx(p);
+            if (idx < 0 || idx >= cells.Length) continue;
+            float delay = (float)(rng.NextDouble() * 0.04f);
+            cells[idx]?.PlaySplash(color, 0.04f, 0.1f, 0.2f, delay);
+        }
+    }
+
     void ClearAllFire()
     {
         foreach (var e in EnumerateEntities())
@@ -1347,6 +1461,33 @@ public class GameManager : MonoBehaviour
                 var p = center + d;
                 if (!InBounds(p)) continue;
                 iceAuraCache[PosToIdx(p)] = true;
+            }
+        }
+    }
+
+    void BuildHauntedAuraCache()
+    {
+        if (hauntedAuraCache == null || hauntedAuraCache.Length != grid.Length)
+        {
+            hauntedAuraCache = new bool[grid.Length];
+        }
+        else
+        {
+            System.Array.Clear(hauntedAuraCache, 0, hauntedAuraCache.Length);
+        }
+
+        foreach (var e in EnumerateEntities())
+        {
+            if (e == null) continue;
+            if (IsTraitTile(e) || IsGhost(e)) continue;
+            if (!e.Has(TraitType.Sentient) && !e.Has(TraitType.Haunted)) continue;
+
+            for (int dy = 0; dy < e.size.y; dy++)
+            for (int dx = 0; dx < e.size.x; dx++)
+            {
+                var p = new Vector2Int(e.anchor.x + dx, e.anchor.y + dy);
+                if (!InBounds(p)) continue;
+                hauntedAuraCache[PosToIdx(p)] = true;
             }
         }
     }
@@ -1577,6 +1718,10 @@ public class GameManager : MonoBehaviour
             if (moved)
             {
                 SpawnGhostStepVfx(ghost.anchor);
+            }
+            if (haunted)
+            {
+                PlayGhostHauntAura(ghost.anchor);
             }
             if (moved || haunted)
             {
@@ -1919,6 +2064,7 @@ public class GameManager : MonoBehaviour
         ghost.size = Vector2Int.one;
         PlaceEntity(ghost, anchor);
         PlaySfx("haunted");
+        PlayGhostSpawnAura(anchor);
     }
 
     // Optional: keep if you still want periodic status refresh or random events
@@ -2467,6 +2613,7 @@ int Project(Vector2Int p, Vector2Int dir)
     {
         var center = sword.anchor;
         PlaySfx("sword slash");
+        PlaySwordFlash(center);
         SpawnSlashVfx(center);
         StartCoroutine(DoSwordEffect(sword));
     }
@@ -2571,6 +2718,7 @@ int Project(Vector2Int p, Vector2Int dir)
             ExtinguishFireInRect(potion.anchor, left: 1, right: 1, up: 1, down: 2);
             status = "SPLASH";
             PlaySfx("bottle break");
+            PlayWaterSplash(potion.anchor);
             RemoveEntity(potion);
             RenderAll();
             return;
@@ -2681,6 +2829,7 @@ int Project(Vector2Int p, Vector2Int dir)
         if (physicsMode) return;
         BuildFireAuraCache();
         BuildIceAuraCache();
+        BuildHauntedAuraCache();
         var selectedAnchor = selector;
         var selEntity = GetSelectedEntity();
         if (selEntity != null) selectedAnchor = selEntity.anchor;
@@ -2692,7 +2841,8 @@ int Project(Vector2Int p, Vector2Int dir)
             var from = (e != null && lastAnchor.TryGetValue(e.id, out var prev)) ? prev : p;
             bool inFireAura = fireAuraCache != null && fireAuraCache[i];
             bool inIceAura = iceAuraCache != null && iceAuraCache[i];
-            cells[i].SetCell(grid[i], selected, false, inFireAura, inIceAura, p, from);
+            bool inHauntedAura = hauntedAuraCache != null && hauntedAuraCache[i];
+            cells[i].SetCell(grid[i], selected, false, inFireAura, inIceAura, inHauntedAura, p, from);
         }
         RenderHud();
         UpdateAnchorCache();

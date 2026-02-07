@@ -11,6 +11,7 @@ public class CellView : MonoBehaviour
     public Image traitIconPrefab;
 
     public Outline outline;
+    public Image fxOverlay;
 
     [Header("Background")]
     public bool useInspectorColors = true;
@@ -18,6 +19,7 @@ public class CellView : MonoBehaviour
     public Color zoneBgColor = new Color(0.1f, 0.3f, 0.1f, 0.4f);
     public Color IceAuraColor;
     public Color FireAuraColor;
+    public Color HauntedAuraColor = new Color(0.35f, 0.08f, 0.35f, 1f);
 
     // Assign sprites in Inspector
     public Sprite breadSprite;
@@ -105,9 +107,61 @@ public class CellView : MonoBehaviour
             rowCanvas.overrideSorting = true;
             rowCanvas.sortingOrder = 20;
         }
+
+        EnsureFxOverlay();
     }
 
-    public void SetCell(BoxEntity e, bool selected, bool isZone, bool inFireAura, bool inIceAura, Vector2Int cellPos, Vector2Int fromPos)
+    void EnsureFxOverlay()
+    {
+        if (fxOverlay != null) return;
+        var go = new GameObject("FxOverlay", typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(transform, false);
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.offsetMin = Vector2.zero;
+        rt.offsetMax = Vector2.zero;
+        fxOverlay = go.GetComponent<Image>();
+        fxOverlay.raycastTarget = false;
+        fxOverlay.color = new Color(1f, 1f, 1f, 0f);
+        fxOverlay.enabled = false;
+    }
+
+    public void PlaySplash(Color color, float inSeconds, float holdSeconds, float outSeconds, float delaySeconds)
+    {
+        EnsureFxOverlay();
+        fxOverlay.DOKill();
+        fxOverlay.enabled = true;
+        var c = new Color(color.r, color.g, color.b, 0f);
+        fxOverlay.color = c;
+        var seq = DOTween.Sequence();
+        if (delaySeconds > 0f) seq.AppendInterval(delaySeconds);
+        seq.Append(fxOverlay.DOColor(new Color(color.r, color.g, color.b, 1f), inSeconds));
+        seq.AppendInterval(holdSeconds);
+        seq.Append(fxOverlay.DOColor(c, outSeconds));
+        seq.OnComplete(() => fxOverlay.enabled = false);
+    }
+
+    public void PlayFlash(Color color, float onSeconds, float offSeconds, float onSeconds2)
+    {
+        EnsureFxOverlay();
+        fxOverlay.DOKill();
+        fxOverlay.enabled = true;
+        var cOn = new Color(color.r, color.g, color.b, 1f);
+        var cOff = new Color(color.r, color.g, color.b, 0f);
+        fxOverlay.color = cOff;
+        var seq = DOTween.Sequence();
+        seq.Append(fxOverlay.DOColor(cOn, 0.02f));
+        seq.AppendInterval(onSeconds);
+        seq.Append(fxOverlay.DOColor(cOff, 0.02f));
+        seq.AppendInterval(offSeconds);
+        seq.Append(fxOverlay.DOColor(cOn, 0.02f));
+        seq.AppendInterval(onSeconds2);
+        seq.Append(fxOverlay.DOColor(cOff, 0.02f));
+        seq.OnComplete(() => fxOverlay.enabled = false);
+    }
+
+    public void SetCell(BoxEntity e, bool selected, bool isZone, bool inFireAura, bool inIceAura, bool inHauntedAura, Vector2Int cellPos, Vector2Int fromPos)
     {
         outline.enabled = selected;
 
@@ -117,6 +171,7 @@ public class CellView : MonoBehaviour
         }
         if (inFireAura) background.color = FireAuraColor;
         else if (inIceAura) background.color = IceAuraColor;
+        else if (inHauntedAura) background.color = HauntedAuraColor;
 
         mainIcon.enabled = false;
         foreach (Transform c in traitIconRow) Destroy(c.gameObject);
