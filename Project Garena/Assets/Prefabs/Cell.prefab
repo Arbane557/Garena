@@ -235,6 +235,10 @@ MonoBehaviour:
   iceSprite: {fileID: -7560284153744367771, guid: cebdd181591681743bdc53f6c0ca4e73, type: 3}
   sentientSprite: {fileID: 21300000, guid: aff924d8775855c4b8a68346c3800e1f, type: 3}
   hauntedSprite: {fileID: 21300000, guid: a5b4534dad2e3fc42b0e962786192b27, type: 3}
+  traitFireSprite: {fileID: 21300000, guid: 0d8dcbf33b200104bae8640ce5e2ff59, type: 3}
+  traitIceSprite: {fileID: 21300000, guid: 546db8a9b2dfaeb48b0a8db70a751350, type: 3}
+  traitSentientSprite: {fileID: 21300000, guid: aff924d8775855c4b8a68346c3800e1f, type: 3}
+  traitHauntedSprite: {fileID: 0}
   ghostFrames:
   - {fileID: 21300000, guid: 55563bdc550abfe4ba699951e7b7b55a, type: 3}
   - {fileID: 21300000, guid: 618e494dff728914e832d27a6f006d89, type: 3}
