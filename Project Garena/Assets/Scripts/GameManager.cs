@@ -253,6 +253,7 @@ public class GameManager : MonoBehaviour
     private string currentCustomerName = null;
     private bool[] fireAuraCache;
     private bool[] iceAuraCache;
+    private bool[] hauntedAuraCache;
     private Dictionary<string, float> iceAuraTime = new Dictionary<string, float>();
     private bool awaitingDialogue = false;
     private bool postOldManLoop = false;
@@ -647,10 +648,12 @@ public class GameManager : MonoBehaviour
             var e = grid[idx];
             var from = (e != null && lastAnchor.TryGetValue(e.id, out var prev)) ? prev : p;
             BuildFireAuraCache();
-            bool inFireAura = fireAuraCache != null && idx >= 0 && idx < fireAuraCache.Length && fireAuraCache[idx];
             BuildIceAuraCache();
+            BuildHauntedAuraCache();
+            bool inFireAura = fireAuraCache != null && idx >= 0 && idx < fireAuraCache.Length && fireAuraCache[idx];
             bool inIceAura = iceAuraCache != null && idx >= 0 && idx < iceAuraCache.Length && iceAuraCache[idx];
-            cells[idx].SetCell(grid[idx], p == selector, false, inFireAura, inIceAura, p, from);
+            bool inHauntedAura = hauntedAuraCache != null && idx >= 0 && idx < hauntedAuraCache.Length && hauntedAuraCache[idx];
+            cells[idx].SetCell(grid[idx], p == selector, false, inFireAura, inIceAura, inHauntedAura, p, from);
             RenderHud();
         }
         else
@@ -1354,6 +1357,32 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    void PlayGhostSpawnAura(Vector2Int center)
+    {
+        if (cells == null) return;
+        var color = new Color(0.45f, 0.1f, 0.6f, 1f);
+        foreach (var p in GetPositionsInRect(center, left: 1, right: 1, up: 1, down: 1))
+        {
+            int idx = PosToIdx(p);
+            if (idx < 0 || idx >= cells.Length) continue;
+            float delay = (float)(rng.NextDouble() * 0.05f);
+            cells[idx]?.PlaySplash(color, 0.05f, 0.08f, 0.18f, delay);
+        }
+    }
+
+    void PlayGhostHauntAura(Vector2Int center)
+    {
+        if (cells == null) return;
+        var color = new Color(0.55f, 0.15f, 0.7f, 1f);
+        foreach (var p in GetPositionsInRect(center, left: 1, right: 1, up: 1, down: 1))
+        {
+            int idx = PosToIdx(p);
+            if (idx < 0 || idx >= cells.Length) continue;
+            float delay = (float)(rng.NextDouble() * 0.04f);
+            cells[idx]?.PlaySplash(color, 0.04f, 0.1f, 0.2f, delay);
+        }
+    }
+
     void ClearAllFire()
     {
         foreach (var e in EnumerateEntities())
@@ -1432,6 +1461,33 @@ public class GameManager : MonoBehaviour
                 var p = center + d;
                 if (!InBounds(p)) continue;
                 iceAuraCache[PosToIdx(p)] = true;
+            }
+        }
+    }
+
+    void BuildHauntedAuraCache()
+    {
+        if (hauntedAuraCache == null || hauntedAuraCache.Length != grid.Length)
+        {
+            hauntedAuraCache = new bool[grid.Length];
+        }
+        else
+        {
+            System.Array.Clear(hauntedAuraCache, 0, hauntedAuraCache.Length);
+        }
+
+        foreach (var e in EnumerateEntities())
+        {
+            if (e == null) continue;
+            if (IsTraitTile(e) || IsGhost(e)) continue;
+            if (!e.Has(TraitType.Sentient) && !e.Has(TraitType.Haunted)) continue;
+
+            for (int dy = 0; dy < e.size.y; dy++)
+            for (int dx = 0; dx < e.size.x; dx++)
+            {
+                var p = new Vector2Int(e.anchor.x + dx, e.anchor.y + dy);
+                if (!InBounds(p)) continue;
+                hauntedAuraCache[PosToIdx(p)] = true;
             }
         }
     }
@@ -1662,6 +1718,10 @@ public class GameManager : MonoBehaviour
             if (moved)
             {
                 SpawnGhostStepVfx(ghost.anchor);
+            }
+            if (haunted)
+            {
+                PlayGhostHauntAura(ghost.anchor);
             }
             if (moved || haunted)
             {
@@ -2004,6 +2064,7 @@ public class GameManager : MonoBehaviour
         ghost.size = Vector2Int.one;
         PlaceEntity(ghost, anchor);
         PlaySfx("haunted");
+        PlayGhostSpawnAura(anchor);
     }
 
     // Optional: keep if you still want periodic status refresh or random events
@@ -2768,6 +2829,7 @@ int Project(Vector2Int p, Vector2Int dir)
         if (physicsMode) return;
         BuildFireAuraCache();
         BuildIceAuraCache();
+        BuildHauntedAuraCache();
         var selectedAnchor = selector;
         var selEntity = GetSelectedEntity();
         if (selEntity != null) selectedAnchor = selEntity.anchor;
@@ -2779,7 +2841,8 @@ int Project(Vector2Int p, Vector2Int dir)
             var from = (e != null && lastAnchor.TryGetValue(e.id, out var prev)) ? prev : p;
             bool inFireAura = fireAuraCache != null && fireAuraCache[i];
             bool inIceAura = iceAuraCache != null && iceAuraCache[i];
-            cells[i].SetCell(grid[i], selected, false, inFireAura, inIceAura, p, from);
+            bool inHauntedAura = hauntedAuraCache != null && hauntedAuraCache[i];
+            cells[i].SetCell(grid[i], selected, false, inFireAura, inIceAura, inHauntedAura, p, from);
         }
         RenderHud();
         UpdateAnchorCache();

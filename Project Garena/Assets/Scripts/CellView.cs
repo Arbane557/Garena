@@ -19,6 +19,7 @@ public class CellView : MonoBehaviour
     public Color zoneBgColor = new Color(0.1f, 0.3f, 0.1f, 0.4f);
     public Color IceAuraColor;
     public Color FireAuraColor;
+    public Color HauntedAuraColor = new Color(0.35f, 0.08f, 0.35f, 1f);
 
     // Assign sprites in Inspector
     public Sprite breadSprite;
@@ -160,7 +161,7 @@ public class CellView : MonoBehaviour
         seq.OnComplete(() => fxOverlay.enabled = false);
     }
 
-    public void SetCell(BoxEntity e, bool selected, bool isZone, bool inFireAura, bool inIceAura, Vector2Int cellPos, Vector2Int fromPos)
+    public void SetCell(BoxEntity e, bool selected, bool isZone, bool inFireAura, bool inIceAura, bool inHauntedAura, Vector2Int cellPos, Vector2Int fromPos)
     {
         outline.enabled = selected;
 
@@ -170,6 +171,7 @@ public class CellView : MonoBehaviour
         }
         if (inFireAura) background.color = FireAuraColor;
         else if (inIceAura) background.color = IceAuraColor;
+        else if (inHauntedAura) background.color = HauntedAuraColor;
 
         mainIcon.enabled = false;
         foreach (Transform c in traitIconRow) Destroy(c.gameObject);
