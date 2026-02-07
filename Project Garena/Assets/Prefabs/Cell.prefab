@@ -231,8 +231,8 @@ MonoBehaviour:
   knifeSprite: {fileID: 21300000, guid: 76e3019793f0ddc40a0df95fbc587e07, type: 3}
   waterBottleSprite: {fileID: 21300000, guid: d3f2e87195a00b04d89dd10b601d9239, type: 3}
   ghostSprite: {fileID: 224562474707688253, guid: a6a9db375518ab94ab1984ae2c844af8, type: 3}
-  fireSprite: {fileID: 21300000, guid: 0d8dcbf33b200104bae8640ce5e2ff59, type: 3}
-  iceSprite: {fileID: 21300000, guid: 546db8a9b2dfaeb48b0a8db70a751350, type: 3}
+  fireSprite: {fileID: 1098286324429101383, guid: dd4ddcdf8661c3e48a5fc4881129d842, type: 3}
+  iceSprite: {fileID: -7560284153744367771, guid: cebdd181591681743bdc53f6c0ca4e73, type: 3}
   sentientSprite: {fileID: 21300000, guid: aff924d8775855c4b8a68346c3800e1f, type: 3}
   hauntedSprite: {fileID: 21300000, guid: a5b4534dad2e3fc42b0e962786192b27, type: 3}
   moveTweenSeconds: 0.12

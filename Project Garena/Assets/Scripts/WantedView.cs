@@ -24,8 +24,24 @@ public class WantedView : MonoBehaviour
     public Sprite breadSprite, knifeSprite, waterSprite;
     public Sprite fireSprite, iceSprite, sentientSprite;
 
+    [Header("Icon Layout")]
+    public bool stretchKnifeIcon = true;
+    public float knifeStretchX = 2f;
+    private Vector2 baseItemSize;
+    private Quaternion baseItemRot;
+
     private string lastPopupName;
     private string lastPopupLine;
+
+    void Awake()
+    {
+        if (itemIcon != null)
+        {
+            var rt = itemIcon.rectTransform;
+            baseItemSize = rt.sizeDelta;
+            baseItemRot = rt.localRotation;
+        }
+    }
 
     public void SetWanted(ItemSubType subType, TraitType requiredTrait, float timeLeft, float timeTotal)
     {
@@ -45,6 +61,7 @@ public class WantedView : MonoBehaviour
     public void SetWanted(ItemSubType subType, IReadOnlyList<TraitType> requiredTraits, float timeLeft, float timeTotal, string customerName, string flavorLine)
     {
         if (itemIcon != null) itemIcon.sprite = ItemSprite(subType);
+        ApplyItemIconLayout(subType);
 
         if (traitIconRow != null && traitIconPrefab != null)
         {
@@ -138,5 +155,23 @@ public class WantedView : MonoBehaviour
         if (traits.Contains(TraitType.Ice)) return "sparks";
         if (traits.Contains(TraitType.Haunted)) return "ghosts";
         return "trouble";
+    }
+
+    void ApplyItemIconLayout(ItemSubType subType)
+    {
+        if (itemIcon == null) return;
+        var rt = itemIcon.rectTransform;
+        if (baseItemSize == Vector2.zero) baseItemSize = rt.sizeDelta;
+
+        if (stretchKnifeIcon && subType == ItemSubType.Knife)
+        {
+            rt.sizeDelta = new Vector2(baseItemSize.x * knifeStretchX, baseItemSize.y);
+            rt.localRotation = baseItemRot;
+        }
+        else
+        {
+            rt.sizeDelta = baseItemSize;
+            rt.localRotation = baseItemRot;
+        }
     }
 }
