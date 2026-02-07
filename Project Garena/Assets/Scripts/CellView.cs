@@ -30,6 +30,12 @@ public class CellView : MonoBehaviour
     public Sprite sentientSprite;
     public Sprite hauntedSprite;
 
+    [Header("Trait Icon Sprites")]
+    public Sprite traitFireSprite;
+    public Sprite traitIceSprite;
+    public Sprite traitSentientSprite;
+    public Sprite traitHauntedSprite;
+
     [Header("Frame Animations")]
     public Sprite[] ghostFrames;
     public float ghostFps = 10f;
@@ -234,10 +240,10 @@ public class CellView : MonoBehaviour
     {
         return tt switch
         {
-            TraitType.Fire => fireSprite,
-            TraitType.Ice => iceSprite,
-            TraitType.Sentient => sentientSprite,
-            TraitType.Haunted => hauntedSprite,
+            TraitType.Fire => traitFireSprite != null ? traitFireSprite : fireSprite,
+            TraitType.Ice => traitIceSprite != null ? traitIceSprite : iceSprite,
+            TraitType.Sentient => traitSentientSprite != null ? traitSentientSprite : sentientSprite,
+            TraitType.Haunted => traitHauntedSprite != null ? traitHauntedSprite : hauntedSprite,
             _ => null
         };
     }
