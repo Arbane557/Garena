@@ -10,12 +10,10 @@ public class PeakBarTester : MonoBehaviour
     public Image heatLockFill;
     public Image coldLockFill;
 
-    [Header("Dimensions")]
     public float barWidth = 420f;
     public float barHeight = 18f;
     public bool vertical = false;
 
-    [Header("Values (0..100)")]
     [Range(0f, 100f)] public float L_hp;
     [Range(0f, 100f)] public float L_weight;
     [Range(0f, 100f)] public float L_heat;

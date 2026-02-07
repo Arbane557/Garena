@@ -88,18 +88,15 @@ public class CellView : MonoBehaviour
 
     public void SetCell(BoxEntity e, bool selected, bool isZone, bool inFireAura, bool inIceAura, Vector2Int cellPos, Vector2Int fromPos)
     {
-        // Background / outline
         outline.enabled = selected;
 
         if (useInspectorColors && background != null)
         {
             background.color = isZone ? zoneBgColor : normalBgColor;
         }
-        // zone tint (simple)
         if (inFireAura) background.color = FireAuraColor;
         else if (inIceAura) background.color = IceAuraColor;
 
-        // Clear
         mainIcon.enabled = false;
         foreach (Transform c in traitIconRow) Destroy(c.gameObject);
 
@@ -144,7 +141,6 @@ public class CellView : MonoBehaviour
             img.enabled = true;
         }
 
-        // Pop on first reveal or entity change
         if (!hadEntity || lastEntityId != e.id)
         {
             var rt = mainIcon.rectTransform;
@@ -153,7 +149,6 @@ public class CellView : MonoBehaviour
             rt.DOPunchScale(Vector3.one * popScale, popDuration, 10, 0.6f);
         }
 
-        // Pulse trait row when trait count increases
         int traitCount = e.traits != null ? e.traits.Count : 0;
         if (lastEntityId == e.id && traitCount > lastTraitCount && traitIconRow != null)
         {
@@ -166,7 +161,6 @@ public class CellView : MonoBehaviour
             }
         }
 
-        // Selection pulse
         if (selected && !wasSelected && rootRect != null)
         {
             rootRect.DOKill();

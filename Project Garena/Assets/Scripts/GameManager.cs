@@ -2302,6 +2302,12 @@ int Project(Vector2Int p, Vector2Int dir)
         if (on) EnsureUIForDragging();
         var gridLayout = gridParent != null ? gridParent.GetComponent<GridLayoutGroup>() : null;
         if (gridLayout != null) gridLayout.enabled = !on;
+        if (!on)
+        {
+            BuildGridUI();
+            RenderAll();
+            return;
+        }
 
         int dragCount = 0;
         var used = new HashSet<string>();
