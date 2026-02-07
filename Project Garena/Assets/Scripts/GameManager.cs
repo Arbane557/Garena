@@ -41,6 +41,9 @@ public class GameManager : MonoBehaviour
     public RectTransform peakBarParent;
     public RectTransform peakBarRoot;
     public GameObject interactPointer;
+    [Header("Portals")]
+    public GameObject portal1;
+    public GameObject portal2;
 
     public WantedView wantedView;
     public BufferView bufferView;
@@ -809,6 +812,7 @@ public class GameManager : MonoBehaviour
         var level = customerLevels[currentCustomerIndex];
         currentCustomerFlavor = level.flavorLine;
         currentCustomerName = level.displayName;
+        UpdatePortalsForLevel(level);
 
         chaosUnlocked = level.enableChaosSpawns;
         chaosTimer = 0f;
@@ -858,6 +862,7 @@ public class GameManager : MonoBehaviour
         if (customerLevels == null || customerLevels.Count == 0)
         {
             currentOrder = null;
+            SetPortals(false, false);
             return;
         }
 
@@ -908,6 +913,7 @@ public class GameManager : MonoBehaviour
             // No more customers for now.
             currentOrder = null;
             status = "NO MORE CUSTOMERS";
+            SetPortals(false, false);
             RenderHud();
             return;
         }
@@ -939,6 +945,34 @@ public class GameManager : MonoBehaviour
         if (indices.Count == 0) return;
         int pick = indices[rng.Next(0, indices.Count)];
         StartCustomerLevel(pick);
+    }
+
+    void UpdatePortalsForLevel(CustomerLevel level)
+    {
+        if (level == null)
+        {
+            SetPortals(false, false);
+            return;
+        }
+
+        if (level.enableIceSpawns)
+        {
+            SetPortals(false, true);
+            return;
+        }
+        if (level.enableFireSpawns)
+        {
+            SetPortals(true, false);
+            return;
+        }
+
+        SetPortals(false, false);
+    }
+
+    void SetPortals(bool p1, bool p2)
+    {
+        if (portal1 != null) portal1.SetActive(p1);
+        if (portal2 != null) portal2.SetActive(p2);
     }
 
     void UpdateCustomerFire(float dt)
