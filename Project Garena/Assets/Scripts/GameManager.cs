@@ -40,6 +40,7 @@ public class GameManager : MonoBehaviour
     public GameObject peakBarPrefab;
     public RectTransform peakBarParent;
     public RectTransform peakBarRoot;
+    public GameObject interactPointer;
 
     public WantedView wantedView;
     public BufferView bufferView;
@@ -2248,10 +2249,13 @@ int Project(Vector2Int p, Vector2Int dir)
         if (physicsMode) return;
         BuildFireAuraCache();
         BuildIceAuraCache();
+        var selectedAnchor = selector;
+        var selEntity = GetSelectedEntity();
+        if (selEntity != null) selectedAnchor = selEntity.anchor;
         for (int i = 0; i < grid.Length; i++)
         {
             var p = IdxToPos(i);
-            bool selected = (p == selector);
+            bool selected = (p == selectedAnchor);
             var e = grid[i];
             var from = (e != null && lastAnchor.TryGetValue(e.id, out var prev)) ? prev : p;
             bool inFireAura = fireAuraCache != null && fireAuraCache[i];
@@ -2260,6 +2264,7 @@ int Project(Vector2Int p, Vector2Int dir)
         }
         RenderHud();
         UpdateAnchorCache();
+        UpdateInteractPointer();
     }
 
     void RenderHud()
@@ -2302,6 +2307,54 @@ int Project(Vector2Int p, Vector2Int dir)
         lastStatus = status;
         lastRep = reputation;
         UpdateEnergyUI();
+        UpdateInteractPointer();
+    }
+
+    void UpdateInteractPointer()
+    {
+        if (interactPointer == null || cells == null) return;
+        var e = GetSelectedEntity();
+        if (e == null || IsTraitTile(e) || IsGhost(e) || !IsUsable(e))
+        {
+            if (interactPointer.activeSelf) interactPointer.SetActive(false);
+            return;
+        }
+
+        Vector3 pos = GetEntityWorldCenter(e);
+        if (pos == Vector3.zero)
+        {
+            if (interactPointer.activeSelf) interactPointer.SetActive(false);
+            return;
+        }
+
+        interactPointer.SetActive(true);
+        interactPointer.transform.position = pos;
+        interactPointer.transform.SetAsLastSibling();
+    }
+
+    bool IsUsable(BoxEntity e)
+    {
+        if (e == null) return false;
+        return e.kind == ItemKind.Sword || e.kind == ItemKind.Potion || e.kind == ItemKind.Bread;
+    }
+
+    Vector3 GetEntityWorldCenter(BoxEntity e)
+    {
+        if (e == null || cells == null) return Vector3.zero;
+        Vector3 sum = Vector3.zero;
+        int count = 0;
+        for (int dy = 0; dy < e.size.y; dy++)
+        for (int dx = 0; dx < e.size.x; dx++)
+        {
+            var p = new Vector2Int(e.anchor.x + dx, e.anchor.y + dy);
+            int idx = PosToIdx(p);
+            if (idx < 0 || idx >= cells.Length) continue;
+            var cv = cells[idx];
+            if (cv == null) continue;
+            sum += cv.transform.position;
+            count++;
+        }
+        return count > 0 ? sum / count : Vector3.zero;
     }
 
     void DisableCellsForEntity(BoxEntity e)
