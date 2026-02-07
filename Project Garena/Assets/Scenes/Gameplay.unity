@@ -5459,7 +5459,7 @@ MonoBehaviour:
   dmgWrong: 12
   healGood: 3
   orderInterval: 6
-  orderLifetime: 12
+  orderLifetime: 25
   orderExpireHpDamage: 6
   minOrderTraits: 1
   maxOrderTraits: 2
@@ -5478,6 +5478,10 @@ MonoBehaviour:
   - That's it. You will learn the rest the hard way.
   tutorialAfterBaker:
   - I hope this line of work is what you expected.
+  tutorialAfterIce:
+  - Have you tried pouring water on those lava blocks?
+  tutorialAtNecromancer:
+  - "Press E to use the item you\u2019re holding."
   ordersBeforeChaos: 8
   initialItemCount: 6
   spawnInitialItems: 1

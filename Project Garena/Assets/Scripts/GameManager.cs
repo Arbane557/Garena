@@ -103,6 +103,10 @@ public class GameManager : MonoBehaviour
     {
         "Have you tried pouring water on those lava blocks?"
     };
+    [TextArea(2, 6)] public List<string> tutorialAtNecromancer = new List<string>
+    {
+        "Press E to use the item you’re holding."
+    };
 
     [Header("Progression")]
     public int ordersBeforeChaos = 7;
@@ -169,6 +173,22 @@ public class GameManager : MonoBehaviour
     public float iceAuraDamagePerSecond = 4f;
     public string iceHurtSfxId = "ice hurt";
     public float iceHurtSfxInterval = 0.6f;
+
+    [Header("Use VFX")]
+    public Color waterSplashColor = new Color(0.2f, 0.55f, 1f, 1f);
+    public float waterSplashInSeconds = 0.06f;
+    public float waterSplashHoldSeconds = 0.12f;
+    public float waterSplashOutSeconds = 0.22f;
+    public float waterSplashMaxDelay = 0.08f;
+    [Range(0f, 1f)] public float waterSplashExtraChance = 0.12f;
+    public int waterSplashExtraLeft = 1;
+    public int waterSplashExtraRight = 1;
+    public int waterSplashExtraUp = 1;
+    public int waterSplashExtraDown = 1;
+    public Color swordFlashColor = Color.white;
+    public float swordFlashOnSeconds = 0.08f;
+    public float swordFlashOffSeconds = 0.08f;
+    public float swordFlashOnSeconds2 = 0.06f;
 
     [Header("Fire Spread (Global)")]
     public float globalFireSpreadInterval = 14f;
@@ -237,6 +257,7 @@ public class GameManager : MonoBehaviour
     private bool awaitingDialogue = false;
     private bool postOldManLoop = false;
     private bool shownAfterIceDialogue = false;
+    private bool shownNecromancerUseTutorial = false;
     private float fireHurtSfxTimer = 0f;
     private float iceHurtSfxTimer = 0f;
     private bool interactTutorialUsed = false;
@@ -740,6 +761,7 @@ public class GameManager : MonoBehaviour
                 flavorLine = "Bread and blades. I burn through both.",
                 orders = new List<OrderSpec>
                 {
+                    OrderSpec.Of(ItemSubType.Bread),
                     OrderSpec.Of(ItemSubType.Bread)
                 },
                 enableChaosSpawns = false,
@@ -833,9 +855,15 @@ public class GameManager : MonoBehaviour
         Debug.Log($"[Customer] Start {level.id}");
         currentCustomerFlavor = level.flavorLine;
         currentCustomerName = level.displayName;
-        interactTutorialUsed = false;
         UpdateInteractTutorial();
         UpdatePortalsForLevel(level);
+
+        if (level.id == "necromancer" && !shownNecromancerUseTutorial)
+        {
+            shownNecromancerUseTutorial = true;
+            interactTutorialUsed = false;
+            UpdateInteractTutorial();
+        }
 
         chaosUnlocked = level.enableChaosSpawns;
         chaosTimer = 0f;
@@ -895,6 +923,11 @@ public class GameManager : MonoBehaviour
         if (level.orders == null || currentCustomerOrderIndex >= level.orders.Count)
         {
             Debug.Log($"[Customer] Complete {level.id}");
+            if (level.id == "necromancer")
+            {
+                interactTutorialUsed = true;
+                UpdateInteractTutorial();
+            }
             if (level.loopOrders)
             {
                 currentCustomerOrderIndex = 0;
@@ -1267,6 +1300,58 @@ public class GameManager : MonoBehaviour
             if (set.Add(b.id)) list.Add(b);
         }
         return list;
+    }
+
+    List<Vector2Int> GetPositionsInRect(Vector2Int center, int left, int right, int up, int down)
+    {
+        var list = new List<Vector2Int>();
+        for (int dy = -up; dy <= down; dy++)
+        for (int dx = -left; dx <= right; dx++)
+        {
+            var p = center + new Vector2Int(dx, dy);
+            if (!InBounds(p)) continue;
+            list.Add(p);
+        }
+        return list;
+    }
+
+    void PlayWaterSplash(Vector2Int center)
+    {
+        if (cells == null) return;
+        var positions = new HashSet<Vector2Int>();
+        foreach (var p in GetPositionsInRect(center, left: 1, right: 1, up: 1, down: 2))
+            positions.Add(p);
+
+        var extra = GetPositionsInRect(center,
+            left: 1 + waterSplashExtraLeft,
+            right: 1 + waterSplashExtraRight,
+            up: 1 + waterSplashExtraUp,
+            down: 2 + waterSplashExtraDown);
+        foreach (var p in extra)
+        {
+            if (positions.Contains(p)) continue;
+            if (rng.NextDouble() < waterSplashExtraChance)
+                positions.Add(p);
+        }
+
+        foreach (var p in positions)
+        {
+            int idx = PosToIdx(p);
+            if (idx < 0 || idx >= cells.Length) continue;
+            float delay = (float)(rng.NextDouble() * waterSplashMaxDelay);
+            cells[idx]?.PlaySplash(waterSplashColor, waterSplashInSeconds, waterSplashHoldSeconds, waterSplashOutSeconds, delay);
+        }
+    }
+
+    void PlaySwordFlash(Vector2Int center)
+    {
+        if (cells == null) return;
+        foreach (var p in GetPositionsInRect(center, left: 1, right: 2, up: 1, down: 1))
+        {
+            int idx = PosToIdx(p);
+            if (idx < 0 || idx >= cells.Length) continue;
+            cells[idx]?.PlayFlash(swordFlashColor, swordFlashOnSeconds, swordFlashOffSeconds, swordFlashOnSeconds2);
+        }
     }
 
     void ClearAllFire()
@@ -2467,6 +2552,7 @@ int Project(Vector2Int p, Vector2Int dir)
     {
         var center = sword.anchor;
         PlaySfx("sword slash");
+        PlaySwordFlash(center);
         SpawnSlashVfx(center);
         StartCoroutine(DoSwordEffect(sword));
     }
@@ -2571,6 +2657,7 @@ int Project(Vector2Int p, Vector2Int dir)
             ExtinguishFireInRect(potion.anchor, left: 1, right: 1, up: 1, down: 2);
             status = "SPLASH";
             PlaySfx("bottle break");
+            PlayWaterSplash(potion.anchor);
             RemoveEntity(potion);
             RenderAll();
             return;
