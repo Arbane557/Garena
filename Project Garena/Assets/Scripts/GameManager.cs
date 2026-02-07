@@ -6,6 +6,8 @@ using UnityEngine.UI;
 using UnityEngine.InputSystem;
 using TMPro;
 using DG.Tweening;
+using Template.Audio;
+using Template.Core;
 
 public class GameManager : MonoBehaviour
 {
@@ -146,6 +148,7 @@ public class GameManager : MonoBehaviour
         InitConveyor();
         InitInitialTraits();      // optional (spawns initial traits on boxes if you want, else remove)
         GenerateNewOrder();
+        PlayBgm("BGM");
 
         RenderAll();
     }
@@ -395,6 +398,7 @@ public class GameManager : MonoBehaviour
         // Keep selector following the moved box (anchor position)
         selector = box.anchor;
         status = box.Has(TraitType.Ice) ? "SLID" : "MOVED";
+        PlaySfx("click");
         RenderAll();
         UpdateAnchorCache();
     }
@@ -425,6 +429,7 @@ public class GameManager : MonoBehaviour
         PlaceEntity(en, anchor);
 
         status = "SPAWNED";
+        PlaySfx("place");
         // Update just the spawned cell immediately, then refresh HUD
         if (cells != null && idx >= 0 && idx < cells.Length)
         {
@@ -459,6 +464,7 @@ public class GameManager : MonoBehaviour
         e.anchor = anchor;
         PlaceEntity(e, anchor);
         status = "AUTO SPAWN";
+        PlaySfx("place");
         RenderAll();
     }
 
@@ -523,12 +529,14 @@ public class GameManager : MonoBehaviour
             reputation += 5;
             L_hp = Mathf.Max(0f, L_hp - healGood);
             status = "ORDER FULFILLED";
+            PlaySfx("submitsuccess");
         }
         else
         {
             reputation -= 1;
             L_hp = Mathf.Min(L_hp_cap, L_hp + dmgWrong);
             status = $"WRONG: need {currentOrder.subType}({TraitsToStr(currentOrder.requiredTraits)}) got {box.subType}({TraitsToStr(box.traits)})";
+            PlaySfx("submitwrong");
             if (reputation <= minReputation) { GameOver(); return; }
         }
 
@@ -803,6 +811,8 @@ public class GameManager : MonoBehaviour
                     box.AddTrait(tile.tileTrait);
                     grid[tileIdx] = null;
                     status = $"ABSORBED {tile.tileTrait}".ToUpper();
+                    if (tile.tileTrait == TraitType.Fire) PlaySfx("fired");
+                    else if (tile.tileTrait == TraitType.Ice) PlaySfx("freezed");
                     RenderAll();
                 }
 
@@ -1645,5 +1655,15 @@ int Project(Vector2Int p, Vector2Int dir)
         canvas.overrideSorting = true;
         canvas.sortingOrder = 100 + order;
         return img;
+    }
+
+    void PlaySfx(string id)
+    {
+        ServiceHub.Get<AudioManager>()?.PlaySfx(id);
+    }
+
+    void PlayBgm(string id)
+    {
+        ServiceHub.Get<AudioManager>()?.PlayBgm(id);
     }
 }

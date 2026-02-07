@@ -14,8 +14,15 @@ namespace Template.Audio
         [SerializeField] private int initialSfxSources = 8;
         [SerializeField] private bool expandSfxSources = true;
 
-        private readonly Dictionary<string, AudioClipSO> sfx = new Dictionary<string, AudioClipSO>();
-        private readonly Dictionary<string, AudioClipSO> bgm = new Dictionary<string, AudioClipSO>();
+        private sealed class AudioEntry
+        {
+            public AudioClip clip;
+            public float volume;
+            public bool loop;
+        }
+
+        private readonly Dictionary<string, AudioEntry> sfx = new Dictionary<string, AudioEntry>();
+        private readonly Dictionary<string, AudioEntry> bgm = new Dictionary<string, AudioEntry>();
         private readonly List<AudioSource> sfxSources = new List<AudioSource>();
         private AudioSource bgmSource;
         private string currentBgmId;
@@ -40,18 +47,26 @@ namespace Template.Audio
 
             foreach (var clip in Resources.LoadAll<AudioClipSO>(sfxResourcesPath))
             {
-                if (clip != null && !string.IsNullOrWhiteSpace(clip.id))
-                {
-                    sfx[clip.id] = clip;
-                }
+                if (clip == null) continue;
+                AddEntry(sfx, clip.id, clip.clip, clip.volume, clip.loop, overwrite: true);
             }
 
             foreach (var clip in Resources.LoadAll<AudioClipSO>(bgmResourcesPath))
             {
-                if (clip != null && !string.IsNullOrWhiteSpace(clip.id))
-                {
-                    bgm[clip.id] = clip;
-                }
+                if (clip == null) continue;
+                AddEntry(bgm, clip.id, clip.clip, clip.volume, clip.loop, overwrite: true);
+            }
+
+            foreach (var clip in Resources.LoadAll<AudioClip>(sfxResourcesPath))
+            {
+                if (clip == null) continue;
+                AddEntry(sfx, clip.name, clip, 1f, loop: false, overwrite: false);
+            }
+
+            foreach (var clip in Resources.LoadAll<AudioClip>(bgmResourcesPath))
+            {
+                if (clip == null) continue;
+                AddEntry(bgm, clip.name, clip, 1f, loop: true, overwrite: false);
             }
         }
 
@@ -141,6 +156,27 @@ namespace Template.Audio
             {
                 bgmSource.volume = data.volume * bgmVolume * masterVolume;
             }
+        }
+
+        private void AddEntry(
+            Dictionary<string, AudioEntry> map,
+            string id,
+            AudioClip clip,
+            float volume,
+            bool loop,
+            bool overwrite)
+        {
+            if (clip == null) return;
+            if (string.IsNullOrWhiteSpace(id)) id = clip.name;
+            if (string.IsNullOrWhiteSpace(id)) return;
+            if (!overwrite && map.ContainsKey(id)) return;
+
+            map[id] = new AudioEntry
+            {
+                clip = clip,
+                volume = Mathf.Clamp01(volume),
+                loop = loop
+            };
         }
 
         private AudioSource GetAvailableSfxSource()
