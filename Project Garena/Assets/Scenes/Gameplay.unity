@@ -4129,8 +4129,7 @@ MonoBehaviour:
   - Use the grid to move items and fulfill requests.
   - You'll learn the rest the hard way.
   tutorialAfterBaker:
-  - Something feels off. The air is getting hotter.
-  - Be ready for orders that don't make sense.
+  - I hope this line of work is what you expected.
   ordersBeforeChaos: 8
   initialItemCount: 6
   spawnInitialItems: 1
@@ -4145,8 +4144,8 @@ MonoBehaviour:
   chaosTintFlashSeconds: 0.35
   chaosTraitSpawnDelay: 8
   chaosGhostSpawnDelay: 8
-  maxGhosts: 3
-  ghostSpawnInterval: 4
+  maxGhosts: 10
+  ghostSpawnInterval: 6
   ghostMergeSeconds: 2
   traitSpawnInterval: 3
   traitMergeSeconds: 2
@@ -4303,8 +4302,6 @@ MonoBehaviour:
   canvasGroup: {fileID: 1911440963}
   charDelay: 0.03
   holdSeconds: 1.5
-  autoAdvanceDialogue: 1
-  advanceOnEnter: 0
 --- !u!225 &1911440963
 CanvasGroup:
   m_ObjectHideFlags: 0

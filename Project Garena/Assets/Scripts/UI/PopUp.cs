@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System;
+using UnityEngine.InputSystem;
 
 public class PopUp : MonoBehaviour
 {
@@ -12,6 +13,7 @@ public class PopUp : MonoBehaviour
     public CanvasGroup canvasGroup;
     public float charDelay = 0.03f;
     public float holdSeconds = 3f;
+    public float minHoldSeconds = 0.25f;
     public bool autoAdvanceDialogue = true;
     public bool advanceOnEnter = false;
 
@@ -121,13 +123,21 @@ public class PopUp : MonoBehaviour
         {
             string line = lines[i] ?? "";
             yield return StartCoroutine(TypeMessage(line));
+            float hold = Mathf.Max(holdSeconds, minHoldSeconds);
             if (autoAdvanceDialogue)
             {
-                yield return new WaitForSeconds(holdSeconds);
+                yield return new WaitForSeconds(hold);
             }
             else
             {
-                yield return StartCoroutine(WaitForAdvance());
+                if (advanceOnEnter)
+                {
+                    yield return StartCoroutine(WaitHoldThenEnter(hold));
+                }
+                else
+                {
+                    yield return new WaitForSeconds(hold);
+                }
             }
         }
 
@@ -138,17 +148,38 @@ public class PopUp : MonoBehaviour
 
     private IEnumerator WaitForAdvance()
     {
+        // Wait for key release to avoid immediately skipping due to held Enter.
+        var kb = Keyboard.current;
+        while (kb != null && (kb.enterKey.isPressed || kb.numpadEnterKey.isPressed))
+        {
+            yield return null;
+        }
         while (true)
         {
-            if (advanceOnEnter)
+            kb = Keyboard.current;
+            if (kb != null && (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame))
             {
-                if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
-                {
-                    break;
-                }
+                break;
             }
             yield return null;
         }
+    }
+
+    private IEnumerator WaitHoldThenEnter(float hold)
+    {
+        float timer = 0f;
+        while (timer < hold)
+        {
+            var kb = Keyboard.current;
+            if (kb != null && (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame))
+            {
+                yield break; // skip hold and advance immediately
+            }
+            timer += Time.deltaTime;
+            yield return null;
+        }
+
+        yield return StartCoroutine(WaitForAdvance());
     }
 
     private IEnumerator TypeMessage(string msg)
