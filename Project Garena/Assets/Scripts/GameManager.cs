@@ -27,6 +27,7 @@ public class GameManager : MonoBehaviour
 
     public TMP_Text reputationText;
     public TMP_Text orderTimerText;
+    public TMP_Text orderTimerStatusText;
     public TMP_Text fullnessText;
     public TMP_Text statusText;
     public Image energyFill;
