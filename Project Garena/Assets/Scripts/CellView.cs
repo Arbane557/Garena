@@ -28,6 +28,15 @@ public class CellView : MonoBehaviour
     private Vector2 baseOffset;
     public float moveTweenSeconds = 0.12f;
     public Ease moveEase = Ease.OutQuad;
+    public float popScale = 0.12f;
+    public float popDuration = 0.18f;
+    public float selectPulseScale = 0.06f;
+    public float selectPulseDuration = 0.12f;
+
+    private bool hadEntity;
+    private bool wasSelected;
+    private string lastEntityId;
+    private int lastTraitCount;
 
     public void Init(System.Action onClick)
     {
@@ -66,12 +75,23 @@ public class CellView : MonoBehaviour
         mainIcon.enabled = false;
         foreach (Transform c in traitIconRow) Destroy(c.gameObject);
 
-        if (e == null) return;
+        if (e == null)
+        {
+            hadEntity = false;
+            lastEntityId = null;
+            lastTraitCount = 0;
+            wasSelected = selected;
+            return;
+        }
 
         bool isAnchor = e.anchor == cellPos;
 
         if (!isAnchor)
         {
+            hadEntity = true;
+            lastEntityId = e.id;
+            lastTraitCount = e.traits != null ? e.traits.Count : 0;
+            wasSelected = selected;
             return;
         }
 
@@ -95,6 +115,41 @@ public class CellView : MonoBehaviour
             img.sprite = TraitSprite(t);
             img.enabled = true;
         }
+
+        // Pop on first reveal or entity change
+        if (!hadEntity || lastEntityId != e.id)
+        {
+            var rt = mainIcon.rectTransform;
+            rt.DOKill();
+            rt.localScale = Vector3.one;
+            rt.DOPunchScale(Vector3.one * popScale, popDuration, 10, 0.6f);
+        }
+
+        // Pulse trait row when trait count increases
+        int traitCount = e.traits != null ? e.traits.Count : 0;
+        if (lastEntityId == e.id && traitCount > lastTraitCount && traitIconRow != null)
+        {
+            var tr = traitIconRow as RectTransform;
+            if (tr != null)
+            {
+                tr.DOKill();
+                tr.localScale = Vector3.one;
+                tr.DOPunchScale(Vector3.one * 0.15f, 0.2f, 10, 0.7f);
+            }
+        }
+
+        // Selection pulse
+        if (selected && !wasSelected && rootRect != null)
+        {
+            rootRect.DOKill();
+            rootRect.localScale = Vector3.one;
+            rootRect.DOPunchScale(Vector3.one * selectPulseScale, selectPulseDuration, 10, 0.7f);
+        }
+
+        hadEntity = true;
+        lastEntityId = e.id;
+        lastTraitCount = traitCount;
+        wasSelected = selected;
 
     }
 
@@ -124,19 +179,9 @@ public class CellView : MonoBehaviour
 
     void AnimateMove(Vector2Int cellPos, Vector2Int fromPos)
     {
-        if (cellPos == fromPos) return;
-
-        var grid = GetComponentInParent<GridLayoutGroup>();
-        if (grid == null) return;
-
-        var delta = fromPos - cellPos;
-        var step = new Vector2(grid.cellSize.x + grid.spacing.x, grid.cellSize.y + grid.spacing.y);
-        var startOffset = baseOffset + new Vector2(delta.x * step.x, -delta.y * step.y);
-
         var rt = mainIcon.rectTransform;
         rt.DOKill();
-        rt.anchoredPosition = startOffset;
-        rt.DOAnchorPos(baseOffset, moveTweenSeconds).SetEase(moveEase);
+        rt.anchoredPosition = baseOffset;
     }
 
     Sprite BoxSprite(ItemSubType st)

@@ -60,6 +60,8 @@ public class GameManager : MonoBehaviour
     private Vector2Int selector = new Vector2Int(0, 0);
 
     private string status = "System Stable";
+    private string lastStatus = null;
+    private int lastRep = int.MinValue;
 
     private Order currentOrder;
     private float orderSpawnTimer = 0f;
@@ -1067,8 +1069,28 @@ int Project(Vector2Int p, Vector2Int dir)
         int pct = Mathf.RoundToInt(100f * filled / grid.Length);
 
         if (fullnessText != null) fullnessText.text = $"GRID: {pct}%";
-        if (statusText != null) statusText.text = status.ToUpper();
-        if (reputationText != null) reputationText.text = $"REP: {reputation}";
+        if (statusText != null)
+        {
+            statusText.text = status.ToUpper();
+            if (lastStatus != status)
+            {
+                var rt = statusText.rectTransform;
+                rt.DOKill();
+                rt.localScale = Vector3.one;
+                rt.DOPunchScale(Vector3.one * 0.12f, 0.18f, 10, 0.7f);
+            }
+        }
+        if (reputationText != null)
+        {
+            reputationText.text = $"REP: {reputation}";
+            if (lastRep != reputation)
+            {
+                var rt = reputationText.rectTransform;
+                rt.DOKill();
+                rt.localScale = Vector3.one;
+                rt.DOPunchScale(Vector3.one * 0.12f, 0.18f, 10, 0.7f);
+            }
+        }
 
         if (currentOrder != null)
         {
@@ -1077,5 +1099,8 @@ int Project(Vector2Int p, Vector2Int dir)
         }
 
         bufferView?.Set(conveyor.ToArray());
+
+        lastStatus = status;
+        lastRep = reputation;
     }
 }
