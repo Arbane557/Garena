@@ -12,6 +12,11 @@ public class CellView : MonoBehaviour
 
     public Outline outline;
 
+    [Header("Background")]
+    public bool useInspectorColors = true;
+    public Color normalBgColor = new Color(0.12f, 0.12f, 0.12f, 1f);
+    public Color zoneBgColor = new Color(0.1f, 0.3f, 0.1f, 0.4f);
+
     // Assign sprites in Inspector
     public Sprite breadSprite;
     public Sprite knifeSprite;
@@ -44,6 +49,23 @@ public class CellView : MonoBehaviour
         if (btn != null) btn.onClick.AddListener(() => onClick?.Invoke());
         rootRect = GetComponent<RectTransform>();
 
+        if (background == null)
+        {
+            background = GetComponent<Image>();
+        }
+        if (background == null)
+        {
+            background = gameObject.AddComponent<Image>();
+            background.color = new Color(0f, 0f, 0f, 0f);
+        }
+        background.raycastTarget = true;
+        var cg = GetComponent<CanvasGroup>();
+        if (cg != null)
+        {
+            cg.blocksRaycasts = true;
+            cg.interactable = true;
+        }
+
         if (mainIcon != null)
         {
             mainIcon.raycastTarget = false;
@@ -67,9 +89,10 @@ public class CellView : MonoBehaviour
         // Background / outline
         outline.enabled = selected;
 
-        // zone tint (simple)
-        if (isZone) background.color = new Color(0.1f, 0.3f, 0.1f, 0.4f);
-        else background.color = new Color(0.12f, 0.12f, 0.12f, 1f);
+        if (useInspectorColors && background != null)
+        {
+            background.color = isZone ? zoneBgColor : normalBgColor;
+        }
 
         // Clear
         mainIcon.enabled = false;

@@ -13,6 +13,7 @@ public class PeakBarTester : MonoBehaviour
     [Header("Dimensions")]
     public float barWidth = 420f;
     public float barHeight = 18f;
+    public bool vertical = false;
 
     [Header("Values (0..100)")]
     [Range(0f, 100f)] public float L_hp;
@@ -85,6 +86,30 @@ public class PeakBarTester : MonoBehaviour
         {
             rt.sizeDelta = new Vector2(barWidth, barHeight);
         }
+        var h = GetComponent<HorizontalLayoutGroup>();
+        var v = GetComponent<VerticalLayoutGroup>();
+        if (vertical)
+        {
+            if (h != null) DestroyImmediate(h);
+            if (v == null) v = gameObject.AddComponent<VerticalLayoutGroup>();
+            v.spacing = 0f;
+            v.childAlignment = TextAnchor.UpperCenter;
+            v.childControlWidth = false;
+            v.childControlHeight = false;
+            v.childForceExpandWidth = false;
+            v.childForceExpandHeight = false;
+        }
+        else
+        {
+            if (v != null) DestroyImmediate(v);
+            if (h == null) h = gameObject.AddComponent<HorizontalLayoutGroup>();
+            h.spacing = 0f;
+            h.childAlignment = TextAnchor.MiddleLeft;
+            h.childControlWidth = false;
+            h.childControlHeight = false;
+            h.childForceExpandWidth = false;
+            h.childForceExpandHeight = false;
+        }
     }
 
     void SetSegment(Image img, float value)
@@ -94,20 +119,22 @@ public class PeakBarTester : MonoBehaviour
         var le = img.GetComponent<LayoutElement>();
         if (le != null)
         {
-            le.preferredWidth = barWidth * pct;
+            le.preferredWidth = vertical ? barWidth : barWidth * pct;
             le.minWidth = 0f;
-            le.preferredHeight = barHeight;
+            le.preferredHeight = vertical ? barHeight * pct : barHeight;
         }
         else
         {
             le = img.gameObject.AddComponent<LayoutElement>();
-            le.preferredWidth = barWidth * pct;
-            le.preferredHeight = barHeight;
+            le.preferredWidth = vertical ? barWidth : barWidth * pct;
+            le.preferredHeight = vertical ? barHeight * pct : barHeight;
         }
         var rt = img.rectTransform;
         if (rt != null)
         {
-            rt.sizeDelta = new Vector2(barWidth * pct, barHeight);
+            rt.sizeDelta = vertical
+                ? new Vector2(barWidth, barHeight * pct)
+                : new Vector2(barWidth * pct, barHeight);
         }
     }
 }
