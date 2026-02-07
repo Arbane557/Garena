@@ -79,8 +79,7 @@ public class GameManager : MonoBehaviour
     };
     [TextArea(2, 6)] public List<string> tutorialAfterBaker = new List<string>
     {
-        "Something feels off. The air is getting hotter.",
-        "Be ready for orders that don't make sense."
+        "I hope this line of work is what you expected."
     };
 
     [Header("Progression")]
@@ -190,6 +189,7 @@ public class GameManager : MonoBehaviour
     private float customerFireTimer = 0f;
     private float fireSpreadTimer = 0f;
     private float customerIceTimer = 0f;
+    private float customerGhostTimer = 0f;
     private string currentCustomerFlavor = null;
     private string currentCustomerName = null;
     private bool[] fireAuraCache;
@@ -273,17 +273,7 @@ public class GameManager : MonoBehaviour
         }
 
         // Timed spawns
-        if (ghostSpawnInterval > 0f && (chaosUnlocked || allowGhostsBeforeChaos))
-        {
-            if (chaosUnlocked) chaosTimer += Time.deltaTime;
-            ghostSpawnTimer += Time.deltaTime;
-            bool ghostDelayOk = !chaosUnlocked || chaosTimer >= chaosGhostSpawnDelay;
-            if (ghostDelayOk && ghostSpawnTimer >= ghostSpawnInterval)
-            {
-                ghostSpawnTimer -= ghostSpawnInterval;
-                TrySpawnGhost();
-            }
-        }
+        UpdateCustomerGhosts(Time.deltaTime);
 
         if (traitSpawnInterval > 0f && (chaosUnlocked || allowTraitTilesBeforeChaos))
         {
@@ -686,7 +676,7 @@ public class GameManager : MonoBehaviour
             new CustomerLevel
             {
                 id = "traveler",
-                displayName = "Wandering Traveler",
+                displayName = "Traveler",
                 flavorLine = "I have a long road ahead. Keep it simple.",
                 orders = new List<OrderSpec>
                 {
@@ -701,16 +691,34 @@ public class GameManager : MonoBehaviour
             new CustomerLevel
             {
                 id = "baker",
-                displayName = "Village Baker",
+                displayName = "Baker",
                 flavorLine = "Bread and blades. I burn through both.",
                 orders = new List<OrderSpec>
                 {
                     OrderSpec.Of(ItemSubType.Bread),
                     OrderSpec.Of(ItemSubType.Knife),
-                    OrderSpec.Of(ItemSubType.Bread)
+                    OrderSpec.Of(ItemSubType.Bread),
+                    OrderSpec.Of(ItemSubType.Knife)
                 },
                 enableChaosSpawns = false,
                 enableFireSpawns = false
+            },
+            new CustomerLevel
+            {
+                id = "necromancer",
+                displayName = "Necromancer",
+                flavorLine = "THE DEAD WANTS TOOLS THAT WON'T OBEY!",
+                orders = new List<OrderSpec>
+                {
+                    OrderSpec.Of(ItemSubType.Knife),
+                    OrderSpec.Of(ItemSubType.WaterBottle),
+                    OrderSpec.Of(ItemSubType.Bread),
+                    OrderSpec.Of(ItemSubType.Knife)
+                },
+                enableChaosSpawns = false,
+                enableGhostSpawns = true,
+                ghostSpawnInterval = 6f,
+                ghostBurstCount = 4
             },
             new CustomerLevel
             {
@@ -721,12 +729,13 @@ public class GameManager : MonoBehaviour
                 {
                     OrderSpec.Of(ItemSubType.Bread, TraitType.Fire),
                     OrderSpec.Of(ItemSubType.Knife, TraitType.Fire),
-                    OrderSpec.Of(ItemSubType.WaterBottle, TraitType.Fire)
+                    OrderSpec.Of(ItemSubType.WaterBottle, TraitType.Fire),
+                    OrderSpec.Of(ItemSubType.Bread, TraitType.Fire)
                 },
                 enableChaosSpawns = false,
                 enableFireSpawns = true,
-                fireSpawnInterval = 8f,
-                fireBurstCount = 2,
+                fireSpawnInterval = 5f,
+                fireBurstCount = 3,
                 enableFireSpread = true,
                 fireSpreadInterval = 8f,
                 fireSpreadChance = 0.25f
@@ -740,7 +749,8 @@ public class GameManager : MonoBehaviour
                 {
                     OrderSpec.Of(ItemSubType.Bread, TraitType.Ice),
                     OrderSpec.Of(ItemSubType.Knife, TraitType.Ice),
-                    OrderSpec.Of(ItemSubType.WaterBottle, TraitType.Ice)
+                    OrderSpec.Of(ItemSubType.WaterBottle, TraitType.Ice),
+                    OrderSpec.Of(ItemSubType.Bread, TraitType.Ice)
                 },
                 enableChaosSpawns = false,
                 enableIceSpawns = false,
@@ -788,7 +798,22 @@ public class GameManager : MonoBehaviour
         customerFireTimer = 0f;
         fireSpreadTimer = 0f;
         customerIceTimer = 0f;
+        customerGhostTimer = 0f;
         iceAuraTime.Clear();
+
+        if (level.enableGhostSpawns && level.ghostBurstCount > 0)
+        {
+            int burst = Mathf.Max(1, level.ghostBurstCount);
+            for (int i = 0; i < burst; i++)
+            {
+                TrySpawnGhost();
+            }
+        }
+        else if (level.enableGhostSpawns)
+        {
+            // Spawn immediately on the next tick instead of waiting a full interval.
+            customerGhostTimer = level.ghostSpawnInterval;
+        }
 
         if (level.enableFireSpawns)
         {
@@ -832,10 +857,10 @@ public class GameManager : MonoBehaviour
                     awaitingDialogue = true;
                     currentOrder = null;
                     orderSpawnTimer = 0f;
-                    PopUp.SetDialogueMode(autoAdvance: false, advanceOnEnter: true);
+                    PopUp.SetDialogueMode(autoAdvance: true, advanceOnEnter: false);
                     PopUp.WriteSequence(tutorialSpeakerName, tutorialAfterBaker, () =>
                     {
-                        awaitingDialogue = false;
+                        awaitingDialogue = true;
                         PopUp.SetDialogueMode(autoAdvance: true, advanceOnEnter: false);
                         StartCustomerLevel(nextLevel);
                     });
@@ -894,6 +919,22 @@ public class GameManager : MonoBehaviour
             {
                 TrySpawnTraitTile(TraitType.Ice);
             }
+        }
+    }
+
+    void UpdateCustomerGhosts(float dt)
+    {
+        if (awaitingDialogue) return;
+        if (customerLevels == null || customerLevels.Count == 0) return;
+        var level = customerLevels[currentCustomerIndex];
+        if (!level.enableGhostSpawns) return;
+
+        float interval = Mathf.Max(0.5f, level.ghostSpawnInterval);
+        customerGhostTimer += dt;
+        if (customerGhostTimer >= interval)
+        {
+            customerGhostTimer = 0f;
+            TrySpawnGhost();
         }
     }
 
@@ -1259,8 +1300,6 @@ public class GameManager : MonoBehaviour
 
         foreach (var ghost in movers.OrderBy(_ => rng.Next()))
         {
-            if (rng.NextDouble() <= 0.5) continue; // 50% chance to move per tick
-
             // Shuffle directions
             for (int k = 0; k < dirs.Length; k++)
             {
@@ -1269,18 +1308,60 @@ public class GameManager : MonoBehaviour
             }
 
             bool moved = false;
-            foreach (var d in dirs)
+            var targetDir = GetGhostChaseDir(ghost.anchor);
+            if (targetDir.HasValue)
             {
+                var d = targetDir.Value;
                 if (TryMoveEntity(ghost, d, allowPush: false))
                 {
                     moved = true;
-                    break;
+                }
+            }
+
+            if (!moved)
+            {
+                foreach (var d in dirs)
+                {
+                    if (TryMoveEntity(ghost, d, allowPush: false))
+                    {
+                        moved = true;
+                        break;
+                    }
                 }
             }
 
             ApplySentientAuraAt(ghost.anchor);
             if (moved) RenderAll();
         }
+    }
+
+    Vector2Int? GetGhostChaseDir(Vector2Int from)
+    {
+        Vector2Int? best = null;
+        int bestDist = int.MaxValue;
+        foreach (var e in EnumerateEntities())
+        {
+            if (e == null) continue;
+            if (IsGhost(e) || IsTraitTile(e)) continue;
+
+            var p = e.anchor;
+            int dist = Mathf.Abs(p.x - from.x) + Mathf.Abs(p.y - from.y);
+            if (dist < bestDist)
+            {
+                bestDist = dist;
+                best = p;
+            }
+        }
+
+        if (!best.HasValue) return null;
+        var target = best.Value;
+        int dx = target.x - from.x;
+        int dy = target.y - from.y;
+        if (Mathf.Abs(dx) >= Mathf.Abs(dy))
+        {
+            return new Vector2Int(Mathf.Clamp(dx, -1, 1), 0);
+        }
+        return new Vector2Int(0, Mathf.Clamp(dy, -1, 1));
     }
 
     void ApplySentientAuraAt(Vector2Int center)
@@ -2778,6 +2859,9 @@ int Project(Vector2Int p, Vector2Int dir)
         public bool spawnInitialIceBurst = false;
         public bool enableIceAura = false;
         public float iceToItemSeconds = 2f;
+        public bool enableGhostSpawns = false;
+        public float ghostSpawnInterval = 6f;
+        public int ghostBurstCount = 0;
     }
 
     [Serializable]
