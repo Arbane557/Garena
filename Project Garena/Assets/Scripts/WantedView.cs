@@ -24,25 +24,12 @@ public class WantedView : MonoBehaviour
     public Sprite breadSprite, knifeSprite, waterSprite;
     public Sprite fireSprite, iceSprite, sentientSprite;
 
-    private string lastPopupName;
-    private string lastPopupLine;
-
     public void SetWanted(ItemSubType subType, TraitType requiredTrait, float timeLeft, float timeTotal)
     {
-        SetWanted(subType, new List<TraitType> { requiredTrait }, timeLeft, timeTotal, null, null);
+        SetWanted(subType, new List<TraitType> { requiredTrait }, timeLeft, timeTotal);
     }
 
     public void SetWanted(ItemSubType subType, IReadOnlyList<TraitType> requiredTraits, float timeLeft, float timeTotal)
-    {
-        SetWanted(subType, requiredTraits, timeLeft, timeTotal, null, null);
-    }
-
-    public void SetWanted(ItemSubType subType, IReadOnlyList<TraitType> requiredTraits, float timeLeft, float timeTotal, string flavorLine)
-    {
-        SetWanted(subType, requiredTraits, timeLeft, timeTotal, null, flavorLine);
-    }
-
-    public void SetWanted(ItemSubType subType, IReadOnlyList<TraitType> requiredTraits, float timeLeft, float timeTotal, string customerName, string flavorLine)
     {
         if (itemIcon != null) itemIcon.sprite = ItemSprite(subType);
 
@@ -69,16 +56,9 @@ public class WantedView : MonoBehaviour
             labelText.text = $"{traitLabel} {subType.ToString().ToUpper()}";
         }
         if (timerText != null) timerText.text = $"{Mathf.CeilToInt(timeLeft)}s";
-        string narrative = string.IsNullOrWhiteSpace(flavorLine)
-            ? BuildNarrative(subType, requiredTraits)
-            : flavorLine;
+        string narrative = BuildNarrative(subType, requiredTraits);
         if (narrativeText != null) narrativeText.text = narrative;
-        if (customerName != lastPopupName || narrative != lastPopupLine)
-        {
-            PopUp.Write(customerName, narrative);
-            lastPopupName = customerName;
-            lastPopupLine = narrative;
-        }
+        PopUp.Write(narrative);
 
         if (timerFill != null)
         {
