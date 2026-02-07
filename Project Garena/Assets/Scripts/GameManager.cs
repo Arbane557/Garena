@@ -70,6 +70,18 @@ public class GameManager : MonoBehaviour
 
     [Header("Customers")]
     public List<CustomerLevel> customerLevels = new List<CustomerLevel>();
+    public string tutorialSpeakerName = "Guide";
+    [TextArea(2, 6)] public List<string> tutorialBeforeFirst = new List<string>
+    {
+        "Welcome. Keep items organized and watch the order box.",
+        "Use the grid to move items and fulfill requests.",
+        "You'll learn the rest the hard way."
+    };
+    [TextArea(2, 6)] public List<string> tutorialAfterBaker = new List<string>
+    {
+        "Something feels off. The air is getting hotter.",
+        "Be ready for orders that don't make sense."
+    };
 
     [Header("Progression")]
     public int ordersBeforeChaos = 7;
@@ -183,6 +195,7 @@ public class GameManager : MonoBehaviour
     private bool[] fireAuraCache;
     private bool[] iceAuraCache;
     private Dictionary<string, float> iceAuraTime = new Dictionary<string, float>();
+    private bool awaitingDialogue = false;
 
     public List<Ghost> ghosts = new List<Ghost>();
 
@@ -210,7 +223,7 @@ public class GameManager : MonoBehaviour
         if (spawnInitialItems) InitInitialItems();
         if (spawnInitialTraits) InitInitialTraits();      // optional (spawns initial traits on boxes if you want, else remove)
         EnsureCustomerLevels();
-        StartCustomerLevel(0);
+        StartTutorialThenLevel0();
         PlayBgm("BGM");
 
         RenderAll();
@@ -599,6 +612,7 @@ public class GameManager : MonoBehaviour
     // ----------------------------
     void UpdateOrder(float dt)
     {
+        if (awaitingDialogue) return;
         if (currentOrder == null)
         {
             orderSpawnTimer += dt;
@@ -723,6 +737,26 @@ public class GameManager : MonoBehaviour
         };
     }
 
+    void StartTutorialThenLevel0()
+    {
+        if (tutorialBeforeFirst == null || tutorialBeforeFirst.Count == 0)
+        {
+            StartCustomerLevel(0);
+            return;
+        }
+
+        awaitingDialogue = true;
+        currentOrder = null;
+        orderSpawnTimer = 0f;
+        PopUp.SetDialogueMode(autoAdvance: false, advanceOnEnter: true);
+        PopUp.WriteSequence(tutorialSpeakerName, tutorialBeforeFirst, () =>
+        {
+            awaitingDialogue = false;
+            PopUp.SetDialogueMode(autoAdvance: true, advanceOnEnter: false);
+            StartCustomerLevel(0);
+        });
+    }
+
     void StartCustomerLevel(int levelIndex)
     {
         if (customerLevels == null || customerLevels.Count == 0) return;
@@ -777,7 +811,23 @@ public class GameManager : MonoBehaviour
             int nextLevel = currentCustomerIndex + 1;
             if (nextLevel < customerLevels.Count)
             {
-                StartCustomerLevel(nextLevel);
+                if (level.id == "baker" && tutorialAfterBaker != null && tutorialAfterBaker.Count > 0)
+                {
+                    awaitingDialogue = true;
+                    currentOrder = null;
+                    orderSpawnTimer = 0f;
+                    PopUp.SetDialogueMode(autoAdvance: false, advanceOnEnter: true);
+                    PopUp.WriteSequence(tutorialSpeakerName, tutorialAfterBaker, () =>
+                    {
+                        awaitingDialogue = false;
+                        PopUp.SetDialogueMode(autoAdvance: true, advanceOnEnter: false);
+                        StartCustomerLevel(nextLevel);
+                    });
+                }
+                else
+                {
+                    StartCustomerLevel(nextLevel);
+                }
                 return;
             }
 
@@ -793,6 +843,7 @@ public class GameManager : MonoBehaviour
 
     void UpdateCustomerFire(float dt)
     {
+        if (awaitingDialogue) return;
         if (customerLevels == null || customerLevels.Count == 0) return;
         var level = customerLevels[currentCustomerIndex];
         if (!level.enableFireSpawns) return;
@@ -812,6 +863,7 @@ public class GameManager : MonoBehaviour
 
     void UpdateCustomerIce(float dt)
     {
+        if (awaitingDialogue) return;
         if (customerLevels == null || customerLevels.Count == 0) return;
         var level = customerLevels[currentCustomerIndex];
         if (!level.enableIceSpawns) return;
@@ -831,6 +883,7 @@ public class GameManager : MonoBehaviour
 
     void UpdateIceAura(float dt)
     {
+        if (awaitingDialogue) return;
         if (customerLevels == null || customerLevels.Count == 0) return;
         var level = customerLevels[currentCustomerIndex];
         if (!level.enableIceAura) return;
@@ -880,6 +933,7 @@ public class GameManager : MonoBehaviour
 
     void UpdateFireSpread(float dt)
     {
+        if (awaitingDialogue) return;
         if (customerLevels == null || customerLevels.Count == 0) return;
         var level = customerLevels[currentCustomerIndex];
         if (!level.enableFireSpread) return;
