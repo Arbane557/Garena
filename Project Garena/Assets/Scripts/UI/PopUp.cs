@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using System;
 
 public class PopUp : MonoBehaviour
 {
@@ -10,11 +11,14 @@ public class PopUp : MonoBehaviour
     public TMP_Text text;
     public CanvasGroup canvasGroup;
     public float charDelay = 0.03f;
-    public float holdSeconds = 1.5f;
+    public float holdSeconds = 3f;
+    public bool autoAdvanceDialogue = true;
+    public bool advanceOnEnter = false;
 
     private static PopUp instance;
     private readonly Queue<string> queue = new Queue<string>();
     private Coroutine runner;
+    private Action onSequenceComplete;
 
     void Awake()
     {
@@ -52,6 +56,24 @@ public class PopUp : MonoBehaviour
         instance.ShowOnce(name, line);
     }
 
+    public static void WriteSequence(string name, IReadOnlyList<string> lines, Action onComplete = null)
+    {
+        if (lines == null || lines.Count == 0) return;
+        if (instance == null)
+        {
+            Debug.LogWarning("PopUp.WriteSequence called but no PopUp instance exists in scene.");
+            return;
+        }
+        instance.ShowSequence(name, lines, onComplete);
+    }
+
+    public static void SetDialogueMode(bool autoAdvance, bool advanceOnEnter)
+    {
+        if (instance == null) return;
+        instance.autoAdvanceDialogue = autoAdvance;
+        instance.advanceOnEnter = advanceOnEnter;
+    }
+
     private void ShowOnce(string message)
     {
         queue.Clear();
@@ -75,6 +97,58 @@ public class PopUp : MonoBehaviour
 
         if (nameText != null) nameText.text = name ?? "";
         runner = StartCoroutine(TypeMessage(line));
+    }
+
+    private void ShowSequence(string name, IReadOnlyList<string> lines, Action onComplete)
+    {
+        queue.Clear();
+        if (runner != null)
+        {
+            StopCoroutine(runner);
+            runner = null;
+        }
+        onSequenceComplete = onComplete;
+        runner = StartCoroutine(PlaySequence(name, lines));
+    }
+
+    private IEnumerator PlaySequence(string name, IReadOnlyList<string> lines)
+    {
+        EnsureUI();
+        canvasGroup.alpha = 1f;
+        if (nameText != null) nameText.text = name ?? "";
+
+        for (int i = 0; i < lines.Count; i++)
+        {
+            string line = lines[i] ?? "";
+            yield return StartCoroutine(TypeMessage(line));
+            if (autoAdvanceDialogue)
+            {
+                yield return new WaitForSeconds(holdSeconds);
+            }
+            else
+            {
+                yield return StartCoroutine(WaitForAdvance());
+            }
+        }
+
+        runner = null;
+        onSequenceComplete?.Invoke();
+        onSequenceComplete = null;
+    }
+
+    private IEnumerator WaitForAdvance()
+    {
+        while (true)
+        {
+            if (advanceOnEnter)
+            {
+                if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+                {
+                    break;
+                }
+            }
+            yield return null;
+        }
     }
 
     private IEnumerator TypeMessage(string msg)
