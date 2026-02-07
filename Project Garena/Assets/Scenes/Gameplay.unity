@@ -332,6 +332,41 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 71084276}
   m_CullTransparentMesh: 1
+--- !u!1 &122040230
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 122040231}
+  m_Layer: 5
+  m_Name: DestroyedParticle
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &122040231
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 122040230}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1620183939}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &231881001
 GameObject:
   m_ObjectHideFlags: 0
@@ -1725,6 +1760,7 @@ RectTransform:
   - {fileID: 913630562}
   - {fileID: 1097099044}
   - {fileID: 2005785560}
+  - {fileID: 122040231}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -1861,10 +1897,28 @@ MonoBehaviour:
   orderTimerText: {fileID: 883033388}
   fullnessText: {fileID: 910646311}
   statusText: {fileID: 1947224979}
+  energyFill: {fileID: 0}
+  hpLockFill: {fileID: 0}
+  weightLockFill: {fileID: 0}
+  heatLockFill: {fileID: 0}
+  coldLockFill: {fileID: 0}
   wantedView: {fileID: 913630565}
   bufferView: {fileID: 527468256}
+  slashPrefab: {fileID: 8380631330012253518, guid: ffdbce68c3996404db67b2f46b86994f, type: 3}
+  slashLifeSeconds: 5
+  slashSpinSeconds: 0.22
+  slashSpinDegrees: 540
   reputation: 50
   minReputation: 0
+  E_max_base: 100
+  E: 0
+  L_hp: 0
+  L_weight: 0
+  L_heat: 0
+  L_cold: 0
+  L_hp_cap: 60
+  dmgWrong: 12
+  healGood: 3
   orderInterval: 6
   orderLifetime: 12
   minOrderTraits: 1
@@ -1876,6 +1930,25 @@ MonoBehaviour:
   traitMergeSeconds: 2
   itemSpawnInterval: 5
   sentientTickInterval: 1
+  regenDelay: 0.35
+  regenRate: 18
+  costPush: 4
+  costPush2x1: 5
+  costSubmit: 2
+  costPerSlide: 1
+  weightStart: 0.55
+  weightEnd: 0.95
+  weightMaxLock: 30
+  heatMax: 30
+  heatBuildRate: 8
+  heatRecoverRate: 10
+  coldMax: 25
+  coldBuildRate: 6
+  coldRecoverRate: 8
+  heatOverload: 24
+  coldOverload: 20
+  glitchInterval: 6
+  glitchChance: 0.08
   ghosts: []
 --- !u!1 &1911440957
 GameObject:

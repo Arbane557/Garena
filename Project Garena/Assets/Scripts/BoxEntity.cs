@@ -22,10 +22,25 @@ public class BoxEntity
     // Fire expires after 5 seconds
     public float fireTimer = 0f;
 
+    public ItemKind kind = ItemKind.Box;
+    public ElementMask elements = ElementMask.None;
+    public float activeCooldown = 0f;
+    public float activeCooldownMax = 1.0f;
+    public float potency = 1f;
+
     public BoxEntity(ItemSubType subType)
     {
         this.subType = subType;
         id = Guid.NewGuid().ToString();
+        kind = subType switch
+        {
+            ItemSubType.Knife => ItemKind.Sword,
+            ItemSubType.WaterBottle => ItemKind.Potion,
+            ItemSubType.Bread => ItemKind.Bread,
+            ItemSubType.Ghost => ItemKind.Ghost,
+            ItemSubType.TraitTile => ItemKind.TraitTile,
+            _ => ItemKind.Box
+        };
     }
 
     public static BoxEntity CreateTraitTile(TraitType t)
@@ -33,6 +48,7 @@ public class BoxEntity
         var e = new BoxEntity(ItemSubType.TraitTile);
         e.isTraitTile = true;
         e.tileTrait = t;
+        e.kind = ItemKind.TraitTile;
         return e;
     }
 

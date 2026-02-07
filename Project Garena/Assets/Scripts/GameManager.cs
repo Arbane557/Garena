@@ -25,13 +25,31 @@ public class GameManager : MonoBehaviour
     public TMP_Text orderTimerText;
     public TMP_Text fullnessText;
     public TMP_Text statusText;
+    public Image energyFill;
+    public Image hpLockFill;
+    public Image weightLockFill;
+    public Image heatLockFill;
+    public Image coldLockFill;
 
     public WantedView wantedView;
     public BufferView bufferView;
+    public GameObject slashPrefab;
+    public float slashLifeSeconds = 5f;
+    public float slashSpinSeconds = 0.22f;
+    public float slashSpinDegrees = 540f;
 
     [Header("Game Rules")]
     public int reputation = 50;
     public int minReputation = 0;
+    public float E_max_base = 100f;
+    public float E;
+    public float L_hp;
+    public float L_weight;
+    public float L_heat;
+    public float L_cold;
+    public float L_hp_cap = 60f;
+    public float dmgWrong = 12f;
+    public float healGood = 3f;
 
     public float orderInterval = 6f;
     public float orderLifetime = 12f;
@@ -54,6 +72,27 @@ public class GameManager : MonoBehaviour
 
     [Header("Sentient Tick")]
     public float sentientTickInterval = 1.0f;
+    public float regenDelay = 0.35f;
+    public float regenRate = 18f;
+    public float costPush = 4f;
+    public float costPush2x1 = 5f;
+    public float costSubmit = 2f;
+    public float costPerSlide = 1f;
+
+    [Header("Weight Lock")]
+    [Range(0f, 1f)] public float weightStart = 0.55f;
+    [Range(0f, 1f)] public float weightEnd = 0.95f;
+    public float weightMaxLock = 30f;
+
+    [Header("Heat/Cold")]
+    public float heatMax = 30f;
+    public float heatBuildRate = 8f;
+    public float heatRecoverRate = 10f;
+    public float coldMax = 25f;
+    public float coldBuildRate = 6f;
+    public float coldRecoverRate = 8f;
+    public float heatOverload = 24f;
+    public float coldOverload = 20f;
 
     // STATE
     private BoxEntity[] grid;
@@ -74,6 +113,16 @@ public class GameManager : MonoBehaviour
     private float traitSpawnTimer = 0f;
     private float itemSpawnTimer = 0f;
     private float ghostMoveTimer = 0f;
+    private float lastActionTimer = 0f;
+    private float heat = 0f;
+    private float cold = 0f;
+    private float fireImmuneTimer = 0f;
+    private float iceImmuneTimer = 0f;
+    private float frozenTimer = 0f;
+    private int frozenMoves = 0;
+    private float glitchTimer = 0f;
+    public float glitchInterval = 6f;
+    [Range(0f, 1f)] public float glitchChance = 0.08f;
 
     public List<Ghost> ghosts = new List<Ghost>();
 
@@ -91,6 +140,8 @@ public class GameManager : MonoBehaviour
     void Start()
     {
         grid = new BoxEntity[gridSize * gridSize];
+        E = E_max_base;
+        BuildPeakBarIfMissing();
 
         BuildGridUI();
         InitDeliveryZones();
@@ -105,6 +156,20 @@ public class GameManager : MonoBehaviour
     void Update()
     {
         HandleInput();
+
+        // Timers
+        fireImmuneTimer = Mathf.Max(0f, fireImmuneTimer - Time.deltaTime);
+        iceImmuneTimer = Mathf.Max(0f, iceImmuneTimer - Time.deltaTime);
+        if (frozenTimer > 0f) frozenTimer = Mathf.Max(0f, frozenTimer - Time.deltaTime);
+        lastActionTimer += Time.deltaTime;
+
+        foreach (var ent in EnumerateEntities())
+        {
+            if (ent == null) continue;
+            ent.activeCooldown = Mathf.Max(0f, ent.activeCooldown - Time.deltaTime);
+        }
+
+        UpdateLocksAndRegen(Time.deltaTime);
 
         // Order system
         UpdateOrder(Time.deltaTime);
@@ -223,11 +288,23 @@ public class GameManager : MonoBehaviour
         if (kb.aKey.wasPressedThisFrame) { selector.x = Mathf.Max(0, selector.x - 1); moved = true; }
         if (kb.dKey.wasPressedThisFrame) { selector.x = Mathf.Min(gridSize - 1, selector.x + 1); moved = true; }
 
+        bool frozen = IsFrozen();
+
         // Shove (Arrow keys)
-        if (kb.upArrowKey.wasPressedThisFrame) ShoveSelected(new Vector2Int(0, -1));
-        if (kb.downArrowKey.wasPressedThisFrame) ShoveSelected(new Vector2Int(0, 1));
-        if (kb.leftArrowKey.wasPressedThisFrame) ShoveSelected(new Vector2Int(-1, 0));
-        if (kb.rightArrowKey.wasPressedThisFrame) ShoveSelected(new Vector2Int(1, 0));
+        if (!frozen)
+        {
+            if (kb.upArrowKey.wasPressedThisFrame) ShoveSelected(new Vector2Int(0, -1));
+            if (kb.downArrowKey.wasPressedThisFrame) ShoveSelected(new Vector2Int(0, 1));
+            if (kb.leftArrowKey.wasPressedThisFrame) ShoveSelected(new Vector2Int(-1, 0));
+            if (kb.rightArrowKey.wasPressedThisFrame) ShoveSelected(new Vector2Int(1, 0));
+        }
+        else if (kb.upArrowKey.wasPressedThisFrame || kb.downArrowKey.wasPressedThisFrame || kb.leftArrowKey.wasPressedThisFrame || kb.rightArrowKey.wasPressedThisFrame)
+        {
+            ConsumeFrozenAttempt();
+        }
+
+        if (!frozen && kb.eKey.wasPressedThisFrame) UseSelected();
+        else if (frozen && kb.eKey.wasPressedThisFrame) ConsumeFrozenAttempt();
 
         // Enter: submit if pushing above top edge; otherwise spawn if empty
         if (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame)
@@ -236,11 +313,13 @@ public class GameManager : MonoBehaviour
             var box = grid[idx];
             if (box != null && !IsTraitTile(box) && !IsGhost(box) && IsAtTopBoundary(box))
             {
-                AttemptSubmit(box, true);
+                if (!frozen && TrySpendEnergy(costSubmit)) AttemptSubmit(box, true);
+                else if (frozen) ConsumeFrozenAttempt();
             }
             else if (grid[idx] == null)
             {
-                SpawnBoxAtSelector();
+                if (!frozen && TrySpendEnergy(costSubmit)) SpawnBoxAtSelector();
+                else if (frozen) ConsumeFrozenAttempt();
             }
             else
             {
@@ -259,6 +338,12 @@ public class GameManager : MonoBehaviour
         int curIdx = PosToIdx(selector);
         var box = grid[curIdx];
         if (box == null) return;
+
+        if (!TrySpendEnergy(GetPushCost(box)))
+        {
+            status = "EXHAUSTED";
+            return;
+        }
 
         if (IsGhost(box))
         {
@@ -286,11 +371,13 @@ public class GameManager : MonoBehaviour
         }
 
         bool moved = false;
+        int steps = 0;
         if (box.Has(TraitType.Ice))
         {
             while (TryMoveEntity(box, dir, allowPush: false))
             {
                 moved = true;
+                steps++;
             }
         }
         else
@@ -301,6 +388,11 @@ public class GameManager : MonoBehaviour
         {
             status = "BLOCKED";
             return;
+        }
+
+        if (steps > 1)
+        {
+            TrySpendEnergy(costPerSlide * (steps - 1));
         }
 
         // Keep selector following the moved box (anchor position)
@@ -329,6 +421,11 @@ public class GameManager : MonoBehaviour
         var en = new BoxEntity(sub);
         en.size = size;
         en.anchor = anchor;
+        if (rng.NextDouble() < 0.2)
+        {
+            en.AddTrait(RandomTraitTile());
+            status = "GLITCHED ITEM";
+        }
         PlaceEntity(en, anchor);
 
         status = "SPAWNED";
@@ -430,12 +527,14 @@ public class GameManager : MonoBehaviour
         if (okType && okTrait)
         {
             reputation += 5;
+            L_hp = Mathf.Max(0f, L_hp - healGood);
             status = "ORDER FULFILLED";
             PlaySfx("submitsuccess");
         }
         else
         {
             reputation -= 1;
+            L_hp = Mathf.Min(L_hp_cap, L_hp + dmgWrong);
             status = $"WRONG: need {currentOrder.subType}({TraitsToStr(currentOrder.requiredTraits)}) got {box.subType}({TraitsToStr(box.traits)})";
             PlaySfx("submitwrong");
             if (reputation <= minReputation) { GameOver(); return; }
@@ -448,7 +547,14 @@ public class GameManager : MonoBehaviour
         {
             SpawnGhostAt(spawnPos);
         }
-        GenerateNewOrder();
+        if (rng.NextDouble() < 0.1)
+        {
+            status = "CUSTOMER CHANGED MIND";
+        }
+        else
+        {
+            GenerateNewOrder();
+        }
         // no delivery zones
         RenderAll();
     }
@@ -778,12 +884,19 @@ public class GameManager : MonoBehaviour
     // Optional: keep if you still want periodic status refresh or random events
     void WorldTick()
     {
-        // Example: clear Haunted from boxes occasionally so it is not permanent
-        for (int i = 0; i < grid.Length; i++)
+
+        // Glitch event: rare swap of two items
+        if (glitchInterval > 0f)
         {
-            var b = grid[i];
-            if (b == null) continue;
-            b.traits.Remove(TraitType.Haunted);
+            glitchTimer += tickRateSeconds;
+            if (glitchTimer >= glitchInterval)
+            {
+                glitchTimer = 0f;
+                if (rng.NextDouble() < glitchChance)
+                {
+                    TrySwapTwoItems();
+                }
+            }
         }
     }
 
@@ -804,6 +917,9 @@ public class GameManager : MonoBehaviour
     bool IsGhost(BoxEntity b) => b != null && b.subType == ItemSubType.Ghost;
     bool IsTraitTile(BoxEntity b) => b != null && b.isTraitTile;
     bool IsPushable(BoxEntity b) => b != null;
+    bool IsFrozen() => frozenTimer > 0f || frozenMoves > 0;
+    bool FireImmune => fireImmuneTimer > 0f;
+    bool IceImmune => iceImmuneTimer > 0f;
 
     Vector2Int GetSizeForSubType(ItemSubType st)
     {
@@ -813,6 +929,98 @@ public class GameManager : MonoBehaviour
             ItemSubType.WaterBottle => new Vector2Int(1, 2),
             _ => Vector2Int.one
         };
+    }
+
+    void UpdateLocksAndRegen(float dt)
+    {
+        // Weight lock from fullness
+        float filled = grid.Count(e => e != null);
+        float total = grid.Length;
+        float F = (total <= 0f) ? 0f : filled / total;
+        float w = Smoothstep(weightStart, weightEnd, F);
+        L_weight = weightMaxLock * w;
+
+        // Heat/cold buildup from selected item
+        var sel = GetSelectedEntity();
+        bool holdingFire = sel != null && sel.Has(TraitType.Fire) && !FireImmune;
+        bool holdingIce = sel != null && sel.Has(TraitType.Ice) && !IceImmune;
+
+        heat = Mathf.Clamp(heat + (holdingFire ? heatBuildRate : -heatRecoverRate) * dt, 0f, heatMax);
+        cold = Mathf.Clamp(cold + (holdingIce ? coldBuildRate : -coldRecoverRate) * dt, 0f, coldMax);
+
+        L_heat = heat;
+        L_cold = cold;
+        L_hp = Mathf.Clamp(L_hp, 0f, L_hp_cap);
+
+        if (heat >= heatOverload) status = "HEAT OVERLOAD";
+        if (cold >= coldOverload) status = "COLD OVERLOAD";
+
+        // Regen
+        float L_total = Mathf.Clamp(L_hp + L_weight + L_heat + L_cold, 0f, E_max_base);
+        float E_max_eff = Mathf.Max(0f, E_max_base - L_total);
+        E = Mathf.Clamp(E, 0f, E_max_eff);
+
+        if (E_max_eff <= 0f)
+        {
+            status = "CAPACITY COLLAPSE";
+            return;
+        }
+
+        if (lastActionTimer >= regenDelay)
+        {
+            E = Mathf.Min(E_max_eff, E + regenRate * dt);
+        }
+    }
+
+    bool TrySpendEnergy(float cost)
+    {
+        if (cost <= 0f) return true;
+        float L_total = Mathf.Clamp(L_hp + L_weight + L_heat + L_cold, 0f, E_max_base);
+        float E_max_eff = Mathf.Max(0f, E_max_base - L_total);
+        E = Mathf.Clamp(E, 0f, E_max_eff);
+
+        if (E_max_eff <= 0f)
+        {
+            status = "CAPACITY COLLAPSE";
+            return false;
+        }
+        if (E < cost)
+        {
+            status = "EXHAUSTED";
+            return false;
+        }
+        E -= cost;
+        lastActionTimer = 0f;
+        return true;
+    }
+
+    float GetPushCost(BoxEntity b)
+    {
+        if (b == null) return costPush;
+        int area = b.size.x * b.size.y;
+        return area >= 2 ? costPush2x1 : costPush;
+    }
+
+    void ConsumeFrozenAttempt()
+    {
+        status = "FROZEN";
+        if (frozenMoves > 0) frozenMoves--;
+    }
+
+    bool IsTraitPassable(BoxEntity mover, BoxEntity tile)
+    {
+        if (mover == null || tile == null || !IsTraitTile(tile)) return false;
+        if (IsGhost(mover)) return false;
+        if (tile.tileTrait == TraitType.Fire && FireImmune) return true;
+        if (tile.tileTrait == TraitType.Ice && IceImmune) return true;
+        return false;
+    }
+
+    float Smoothstep(float a, float b, float x)
+    {
+        if (Mathf.Approximately(a, b)) return 0f;
+        float t = Mathf.Clamp01((x - a) / (b - a));
+        return t * t * (3f - 2f * t);
     }
 
     bool CanPlaceAt(Vector2Int anchor, Vector2Int size)
@@ -923,7 +1131,16 @@ int Project(Vector2Int p, Vector2Int dir)
             if (!allowPush) return false;
 
             // do not push trait tiles
-            if (IsTraitTile(b)) return false;
+            if (IsTraitTile(b))
+            {
+                if (IsTraitPassable(root, b))
+                {
+                    // consume tile so we can occupy the cell
+                    RemoveEntity(b);
+                    continue;
+                }
+                return false;
+            }
 
             // optional: if you never want ghosts to push other ghosts
             // if (IsGhost(e) && IsGhost(b)) return false;
@@ -1056,6 +1273,267 @@ int Project(Vector2Int p, Vector2Int dir)
         }
     }
 
+    void UseSelected()
+    {
+        var e = GetSelectedEntity();
+        if (e == null) return;
+
+        if (e.activeCooldown > 0f)
+        {
+            status = "ON COOLDOWN";
+            return;
+        }
+
+        switch (e.kind)
+        {
+            case ItemKind.Sword:
+                UseSword(e);
+                break;
+            case ItemKind.Potion:
+                UsePotion(e);
+                break;
+            case ItemKind.Bread:
+                UseBread(e);
+                break;
+            default:
+                status = "NO USE";
+                break;
+        }
+    }
+
+    BoxEntity GetSelectedEntity()
+    {
+        int idx = PosToIdx(selector);
+        var e = grid[idx];
+        if (e == null) return null;
+        var a = e.anchor;
+        return grid[PosToIdx(a)];
+    }
+
+    void UseSword(BoxEntity sword)
+    {
+        var center = sword.anchor;
+        SpawnSlashVfx(center);
+        StartCoroutine(DoSwordEffect(sword));
+    }
+
+    System.Collections.IEnumerator DoSwordEffect(BoxEntity sword)
+    {
+        float delay = Mathf.Max(0f, slashSpinSeconds * 0.5f);
+        if (delay > 0f) yield return new WaitForSeconds(delay);
+
+        if (sword == null) yield break;
+        var center = sword.anchor;
+        var targets = GetEntitiesIn3x3(center);
+        bool hasFire = sword.Has(TraitType.Fire);
+        bool hasIce = sword.Has(TraitType.Ice);
+        bool destroyAll = hasFire && hasIce;
+
+        foreach (var t in targets)
+        {
+            if (t == null) continue;
+            if (t == sword) continue;
+
+            if (destroyAll)
+            {
+                RemoveEntity(t);
+                continue;
+            }
+
+            if (IsGhost(t))
+            {
+                RemoveEntity(t);
+                continue;
+            }
+
+            if (IsTraitTile(t))
+            {
+                if (hasFire && t.tileTrait == TraitType.Fire) RemoveEntity(t);
+                else if (hasIce && t.tileTrait == TraitType.Ice) RemoveEntity(t);
+            }
+        }
+
+        RemoveEntity(sword);
+        status = "SLASH";
+        RenderAll();
+    }
+
+    void SpawnSlashVfx(Vector2Int center)
+    {
+        GameObject prefab = slashPrefab;
+        if (prefab == null)
+        {
+            prefab = Resources.Load<GameObject>("Slash");
+            if (prefab == null) prefab = Resources.Load<GameObject>("Art/Slash");
+        }
+        if (prefab == null || cells == null) return;
+
+        int idx = PosToIdx(center);
+        if (idx < 0 || idx >= cells.Length) return;
+        var cell = cells[idx];
+        if (cell == null) return;
+
+        var vfx = Instantiate(prefab, cell.transform);
+        var vfxRt = vfx.GetComponent<RectTransform>();
+        var cellRt = cell.GetComponent<RectTransform>();
+        if (vfxRt != null && cellRt != null)
+        {
+            vfxRt.anchorMin = new Vector2(0.5f, 0.5f);
+            vfxRt.anchorMax = new Vector2(0.5f, 0.5f);
+            vfxRt.pivot = new Vector2(0.5f, 0.5f);
+            vfxRt.anchoredPosition = Vector2.zero;
+            vfxRt.localScale = Vector3.one;
+
+            var grid = gridParent.GetComponent<GridLayoutGroup>();
+            if (grid != null)
+            {
+                var size = grid.cellSize;
+                var spacing = grid.spacing;
+                float w = size.x * 3f + spacing.x * 2f;
+                float h = size.y * 3f + spacing.y * 2f;
+                vfxRt.sizeDelta = new Vector2(w, h);
+            }
+        }
+
+        var vfxCanvas = vfx.GetComponent<Canvas>();
+        if (vfxCanvas == null) vfxCanvas = vfx.AddComponent<Canvas>();
+        vfxCanvas.overrideSorting = true;
+        vfxCanvas.sortingOrder = 1000;
+
+        vfx.transform.DOKill();
+        vfx.transform.localRotation = Quaternion.identity;
+        vfx.transform.DORotate(new Vector3(0f, 0f, slashSpinDegrees), slashSpinSeconds, RotateMode.FastBeyond360)
+            .SetEase(Ease.OutCubic);
+
+        Destroy(vfx, slashLifeSeconds);
+    }
+
+    void UsePotion(BoxEntity potion)
+    {
+        bool hasFire = potion.Has(TraitType.Fire);
+        bool hasIce = potion.Has(TraitType.Ice);
+        if (!hasFire && !hasIce)
+        {
+            status = "POTION DOES NOTHING";
+            return;
+        }
+
+        float dur = 6f;
+        if (hasFire) fireImmuneTimer = Mathf.Max(fireImmuneTimer, dur);
+        if (hasIce) iceImmuneTimer = Mathf.Max(iceImmuneTimer, dur);
+
+        RemoveEntity(potion);
+        status = "IMMUNITY UP";
+        RenderAll();
+    }
+
+    void UseBread(BoxEntity bread)
+    {
+        bool hasFire = bread.Has(TraitType.Fire);
+        bool hasIce = bread.Has(TraitType.Ice);
+
+        if (!hasFire && !hasIce)
+        {
+            L_hp = Mathf.Max(0f, L_hp - 15f);
+            E = Mathf.Min(E_max_base, E + 10f);
+            status = "HEALED";
+        }
+        else if (hasFire && !hasIce)
+        {
+            AddHeatBuildup(12f);
+            status = "BURNED";
+        }
+        else if (hasIce && !hasFire)
+        {
+            ApplyFreezeMoves(3);
+            status = "FROZEN";
+        }
+        else
+        {
+            AddHeatBuildup(10f);
+            ApplyFreezeMoves(2);
+            status = "SHOCK";
+        }
+
+        RemoveEntity(bread);
+        RenderAll();
+    }
+
+    List<BoxEntity> GetEntitiesIn3x3(Vector2Int center)
+    {
+        var set = new HashSet<string>();
+        var list = new List<BoxEntity>();
+        for (int dy = -1; dy <= 1; dy++)
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            var p = new Vector2Int(center.x + dx, center.y + dy);
+            if (!InBounds(p)) continue;
+            var b = grid[PosToIdx(p)];
+            if (b == null) continue;
+            if (set.Add(b.id)) list.Add(b);
+        }
+        return list;
+    }
+
+    void ApplyFreezeMoves(int moves)
+    {
+        frozenMoves = Mathf.Max(frozenMoves, moves);
+    }
+
+    void AddHeatBuildup(float amount)
+    {
+        heat = Mathf.Clamp(heat + amount, 0f, heatMax);
+    }
+
+    void CleaveTraits(Vector2Int center)
+    {
+        for (int dy = -1; dy <= 1; dy++)
+        for (int dx = -1; dx <= 1; dx++)
+        {
+            var p = new Vector2Int(center.x + dx, center.y + dy);
+            if (!InBounds(p)) continue;
+            var e = grid[PosToIdx(p)];
+            if (e != null && IsTraitTile(e))
+            {
+                grid[PosToIdx(p)] = null;
+            }
+        }
+    }
+
+    void TrySwapTwoItems()
+    {
+        var items = new List<BoxEntity>();
+        foreach (var e in EnumerateEntities())
+        {
+            if (e == null || IsTraitTile(e) || IsGhost(e)) continue;
+            items.Add(e);
+        }
+        if (items.Count < 2) return;
+        var a = items[rng.Next(0, items.Count)];
+        var b = items[rng.Next(0, items.Count)];
+        if (a == b) return;
+
+        var aAnchor = a.anchor;
+        var bAnchor = b.anchor;
+
+        RemoveEntity(a);
+        RemoveEntity(b);
+
+        if (CanPlaceAt(bAnchor, a.size) && CanPlaceAt(aAnchor, b.size))
+        {
+            PlaceEntity(a, bAnchor);
+            PlaceEntity(b, aAnchor);
+            status = "GLITCH SWAP!";
+            RenderAll();
+        }
+        else
+        {
+            // put them back if swap fails
+            PlaceEntity(a, aAnchor);
+            PlaceEntity(b, bAnchor);
+        }
+    }
+
     // ----------------------------
     // UI RENDER
     // ----------------------------
@@ -1112,6 +1590,71 @@ int Project(Vector2Int p, Vector2Int dir)
 
         lastStatus = status;
         lastRep = reputation;
+        UpdateEnergyUI();
+    }
+
+    void UpdateEnergyUI()
+    {
+        float L_total = Mathf.Clamp(L_hp + L_weight + L_heat + L_cold, 0f, E_max_base);
+        float E_max_eff = Mathf.Max(0f, E_max_base - L_total);
+        E = Mathf.Clamp(E, 0f, E_max_eff);
+
+        if (energyFill != null) energyFill.fillAmount = (E_max_base <= 0f) ? 0f : (E / E_max_base);
+        if (hpLockFill != null) hpLockFill.fillAmount = (E_max_base <= 0f) ? 0f : (L_hp / E_max_base);
+        if (weightLockFill != null) weightLockFill.fillAmount = (E_max_base <= 0f) ? 0f : (L_weight / E_max_base);
+        if (heatLockFill != null) heatLockFill.fillAmount = (E_max_base <= 0f) ? 0f : (L_heat / E_max_base);
+        if (coldLockFill != null) coldLockFill.fillAmount = (E_max_base <= 0f) ? 0f : (L_cold / E_max_base);
+    }
+
+    void BuildPeakBarIfMissing()
+    {
+        if (energyFill != null && hpLockFill != null && weightLockFill != null && heatLockFill != null && coldLockFill != null)
+            return;
+
+        var canvas = FindObjectOfType<Canvas>();
+        if (canvas == null) return;
+
+        var root = new GameObject("PeakBar");
+        root.transform.SetParent(canvas.transform, false);
+        var rt = root.AddComponent<RectTransform>();
+        rt.anchorMin = new Vector2(0.5f, 1f);
+        rt.anchorMax = new Vector2(0.5f, 1f);
+        rt.pivot = new Vector2(0.5f, 1f);
+        rt.anchoredPosition = new Vector2(0f, -20f);
+        rt.sizeDelta = new Vector2(420f, 18f);
+
+        var bg = root.AddComponent<Image>();
+        bg.color = new Color(0.08f, 0.08f, 0.12f, 0.9f);
+
+        energyFill = CreateFill(root.transform, "EnergyFill", new Color(0.95f, 0.25f, 0.25f, 1f), 0);
+        hpLockFill = CreateFill(root.transform, "HpLock", new Color(0.2f, 0.2f, 0.2f, 0.9f), 1);
+        weightLockFill = CreateFill(root.transform, "WeightLock", new Color(0.2f, 0.35f, 0.6f, 0.9f), 2);
+        heatLockFill = CreateFill(root.transform, "HeatLock", new Color(0.9f, 0.4f, 0.1f, 0.9f), 3);
+        coldLockFill = CreateFill(root.transform, "ColdLock", new Color(0.2f, 0.8f, 0.9f, 0.9f), 4);
+    }
+
+    Image CreateFill(Transform parent, string name, Color color, int order)
+    {
+        var go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+        var img = go.AddComponent<Image>();
+        img.color = color;
+        img.type = Image.Type.Filled;
+        img.fillMethod = Image.FillMethod.Horizontal;
+        img.fillOrigin = (int)Image.OriginHorizontal.Left;
+        img.fillAmount = 1f;
+        img.raycastTarget = false;
+
+        var rt = img.rectTransform;
+        rt.anchorMin = new Vector2(0f, 0f);
+        rt.anchorMax = new Vector2(1f, 1f);
+        rt.offsetMin = Vector2.zero;
+        rt.offsetMax = Vector2.zero;
+
+        var canvas = img.gameObject.AddComponent<Canvas>();
+        canvas.overrideSorting = true;
+        canvas.sortingOrder = 100 + order;
+        return img;
     }
 
     void PlaySfx(string id)
