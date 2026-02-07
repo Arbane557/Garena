@@ -49,11 +49,6 @@ public class ScreenShake : MonoBehaviour
 
     public static void Shake(float duration = 0.12f, float strength = 6f, int vibrato = 18)
     {
-        if (instance == null)
-        {
-            var go = new GameObject("ScreenShake");
-            instance = go.AddComponent<ScreenShake>();
-        }
         if (instance.feedbackPlayer != null)
         {
             instance.feedbackPlayer.PlayFeedbacks();
