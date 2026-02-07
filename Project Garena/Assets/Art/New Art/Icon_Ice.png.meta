@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: aff924d8775855c4b8a68346c3800e1f
+guid: 546db8a9b2dfaeb48b0a8db70a751350
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -1916509828021115027
-    second: Icon_sentient_0
+      213: 4368363140937295827
+    second: Icon_Ice_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -37,7 +37,7 @@ TextureImporter:
   maxTextureSize: 2048
   textureSettings:
     serializedVersion: 2
-    filterMode: 1
+    filterMode: 0
     aniso: 1
     mipBias: 0
     wrapU: 1
@@ -113,7 +113,7 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Icon_sentient_0
+      name: Icon_Ice_0
       rect:
         serializedVersion: 2
         x: 16
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: d67a14c27703765e0800000000000000
-      internalID: -1916509828021115027
+      spriteID: 3d72a71d12b8f9c30800000000000000
+      internalID: 4368363140937295827
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      Icon_sentient_0: -1916509828021115027
+      Icon_Ice_0: 4368363140937295827
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

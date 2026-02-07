@@ -5,6 +5,23 @@ public class BufferView : MonoBehaviour
 {
     public Image[] slots; // size 3
     public Sprite breadSprite, knifeSprite, waterSprite;
+    private Vector2[] baseSizes;
+    private Quaternion[] baseRotations;
+
+    private void Awake()
+    {
+        if (slots == null) return;
+
+        baseSizes = new Vector2[slots.Length];
+        baseRotations = new Quaternion[slots.Length];
+        for (int i = 0; i < slots.Length; i++)
+        {
+            if (slots[i] == null) continue;
+            var rt = slots[i].rectTransform;
+            baseSizes[i] = rt.sizeDelta;
+            baseRotations[i] = rt.localRotation;
+        }
+    }
 
     public void Set(ItemSubType[] items)
     {
@@ -22,6 +39,34 @@ public class BufferView : MonoBehaviour
                 ItemSubType.WaterBottle => waterSprite,
                 _ => null
             };
+
+            ApplySizeAndRotation(i, items[i]);
+        }
+    }
+
+    private void ApplySizeAndRotation(int index, ItemSubType item)
+    {
+        if (index < 0 || index >= slots.Length) return;
+        if (slots[index] == null) return;
+
+        var rt = slots[index].rectTransform;
+        var baseSize = (baseSizes != null && index < baseSizes.Length) ? baseSizes[index] : rt.sizeDelta;
+        var baseRot = (baseRotations != null && index < baseRotations.Length) ? baseRotations[index] : rt.localRotation;
+
+        switch (item)
+        {
+            case ItemSubType.Knife:
+                rt.sizeDelta = new Vector2(baseSize.x * 2f, baseSize.y);
+                rt.localRotation = baseRot;
+                break;
+            case ItemSubType.WaterBottle:
+                rt.sizeDelta = new Vector2(baseSize.x * 0.5f, baseSize.y);
+                rt.localRotation = Quaternion.Euler(0f, 0f, -30f);
+                break;
+            default:
+                rt.sizeDelta = baseSize;
+                rt.localRotation = baseRot;
+                break;
         }
     }
 }

@@ -908,55 +908,104 @@ public class GameManager : MonoBehaviour
         return e.anchor.y == 0;
     }
 
-    bool TryMoveEntity(BoxEntity e, Vector2Int dir, bool allowPush)
+    bool AreaInBounds(Vector2Int anchor, Vector2Int size)
+{
+    for (int dy = 0; dy < size.y; dy++)
+    for (int dx = 0; dx < size.x; dx++)
     {
-        if (e == null) return false;
-        if (IsTraitTile(e)) return false;
+        var p = new Vector2Int(anchor.x + dx, anchor.y + dy);
+        if (!InBounds(p)) return false;
+    }
+    return true;
+}
 
-        var visited = new HashSet<BoxEntity>();
-        return TryMoveEntityInternal(e, dir, allowPush, visited);
+List<BoxEntity> GetUniqueBlockersInArea(Vector2Int anchor, Vector2Int size, BoxEntity ignore)
+{
+    var set = new HashSet<string>();
+    var list = new List<BoxEntity>();
+
+    for (int dy = 0; dy < size.y; dy++)
+    for (int dx = 0; dx < size.x; dx++)
+    {
+        var p = new Vector2Int(anchor.x + dx, anchor.y + dy);
+        var b = grid[PosToIdx(p)];
+        if (b == null || b == ignore) continue;
+
+        if (set.Add(b.id)) list.Add(b);
     }
 
-    bool TryMoveEntityInternal(BoxEntity e, Vector2Int dir, bool allowPush, HashSet<BoxEntity> visited)
+    return list;
+}
+
+int Project(Vector2Int p, Vector2Int dir)
+{
+    return p.x * dir.x + p.y * dir.y;
+}
+
+
+   bool TryMoveEntity(BoxEntity root, Vector2Int dir, bool allowPush)
+{
+    if (root == null) return false;
+    if (IsTraitTile(root)) return false;
+
+    // Build push chain without changing the grid
+    var queue = new Queue<BoxEntity>();
+    var seen = new HashSet<string>();
+    var chain = new List<BoxEntity>();
+
+    queue.Enqueue(root);
+    seen.Add(root.id);
+
+    while (queue.Count > 0)
     {
-        if (visited.Contains(e)) return true;
-        visited.Add(e);
+        var e = queue.Dequeue();
 
         var newAnchor = e.anchor + dir;
-        var size = e.size;
 
-        // Bounds
-        for (int dy = 0; dy < size.y; dy++)
-        for (int dx = 0; dx < size.x; dx++)
+        // must fit inside bounds
+        if (!AreaInBounds(newAnchor, e.size))
+            return false;
+
+        // find blockers in destination area (dedup by id)
+        var blockers = GetUniqueBlockersInArea(newAnchor, e.size, e);
+
+        foreach (var b in blockers)
         {
-            var p = new Vector2Int(newAnchor.x + dx, newAnchor.y + dy);
-            if (!InBounds(p)) return false;
-        }
-
-        // Resolve blockers
-        for (int dy = 0; dy < size.y; dy++)
-        for (int dx = 0; dx < size.x; dx++)
-        {
-            var p = new Vector2Int(newAnchor.x + dx, newAnchor.y + dy);
-            var idx = PosToIdx(p);
-            var blocker = grid[idx];
-            if (blocker == null || blocker == e) continue;
-
+            // cannot push unless allowed
             if (!allowPush) return false;
-            if (!TryMoveEntityInternal(blocker, dir, true, visited)) return false;
 
-            if (IsGhost(e) && !IsGhost(blocker) && !IsTraitTile(blocker))
-            {
-                blocker.AddTrait(TraitType.Haunted);
-                RenderAll();
-            }
+            // do not push trait tiles
+            if (IsTraitTile(b)) return false;
+
+            // optional: if you never want ghosts to push other ghosts
+            // if (IsGhost(e) && IsGhost(b)) return false;
+
+            if (seen.Add(b.id))
+                queue.Enqueue(b);
         }
 
-        // Move
-        RemoveEntity(e);
-        PlaceEntity(e, newAnchor);
-        return true;
+        chain.Add(e);
     }
+
+    // Commit: move farthest-first to avoid stepping on each other
+    chain = chain
+        .Distinct()
+        .OrderByDescending(e => Project(e.anchor, dir))
+        .ToList();
+
+    // 1) Clear all cells for all entities in the chain
+    foreach (var e in chain) RemoveEntity(e);
+
+    // 2) Place them at new anchors
+    foreach (var e in chain)
+    {
+        var newAnchor = e.anchor + dir;
+        PlaceEntity(e, newAnchor);
+    }
+
+    return true;
+}
+
 
     IEnumerable<BoxEntity> EnumerateEntities()
     {
