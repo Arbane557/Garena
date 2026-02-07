@@ -44,6 +44,12 @@ public class GameManager : MonoBehaviour
     [Header("Portals")]
     public GameObject portal1;
     public GameObject portal2;
+    [Header("Damage Flash UI")]
+    public GameObject hpDamageFlash;
+    public GameObject hotDamageFlash;
+    public GameObject freezeDamageFlash;
+    public float flashDuration = 0.15f;
+    public float flashCooldown = 0.2f;
 
     public WantedView wantedView;
     public BufferView bufferView;
@@ -67,6 +73,7 @@ public class GameManager : MonoBehaviour
 
     public float orderInterval = 6f;
     public float orderLifetime = 12f;
+    public float orderExpireHpDamage = 6f;
 
     [Header("Order Traits")]
     [Range(0, 3)] public int minOrderTraits = 1;
@@ -221,6 +228,12 @@ public class GameManager : MonoBehaviour
     private bool postOldManLoop = false;
     private float fireHurtSfxTimer = 0f;
     private float iceHurtSfxTimer = 0f;
+    private float prevHpLock = 0f;
+    private float prevHeat = 0f;
+    private float prevCold = 0f;
+    private float hpFlashTimer = 0f;
+    private float hotFlashTimer = 0f;
+    private float coldFlashTimer = 0f;
 
     public List<Ghost> ghosts = new List<Ghost>();
 
@@ -265,6 +278,9 @@ public class GameManager : MonoBehaviour
         iceImmuneTimer = Mathf.Max(0f, iceImmuneTimer - Time.deltaTime);
         if (frozenTimer > 0f) frozenTimer = Mathf.Max(0f, frozenTimer - Time.deltaTime);
         lastActionTimer += Time.deltaTime;
+        if (hpFlashTimer > 0f) hpFlashTimer -= Time.deltaTime;
+        if (hotFlashTimer > 0f) hotFlashTimer -= Time.deltaTime;
+        if (coldFlashTimer > 0f) coldFlashTimer -= Time.deltaTime;
 
         foreach (var ent in EnumerateEntities())
         {
@@ -645,11 +661,9 @@ public class GameManager : MonoBehaviour
         currentOrder.timeLeft -= dt;
         if (currentOrder.timeLeft <= 0f)
         {
-            reputation -= 10;
-            status = "ORDER FAILED";
-            currentOrder.timeLeft = orderLifetime;
-
-            if (reputation <= minReputation) GameOver();
+            L_hp = Mathf.Min(L_hp_cap, L_hp + orderExpireHpDamage);
+            status = "ORDER EXPIRED";
+            GenerateNewOrder();
         }
     }
 
@@ -1965,6 +1979,13 @@ public class GameManager : MonoBehaviour
         L_cold = cold;
         L_hp = Mathf.Clamp(L_hp, 0f, L_hp_cap);
 
+        if (L_hp > prevHpLock + 0.001f) TriggerHpDamageFlash();
+        if (heat > prevHeat + 0.001f) TriggerHotDamageFlash();
+        if (cold > prevCold + 0.001f) TriggerFreezeDamageFlash();
+        prevHpLock = L_hp;
+        prevHeat = heat;
+        prevCold = cold;
+
         if (heat >= heatOverload) status = "HEAT OVERLOAD";
         if (cold >= coldOverload) status = "COLD OVERLOAD";
 
@@ -2027,6 +2048,38 @@ public class GameManager : MonoBehaviour
         if (tile.tileTrait == TraitType.Fire && FireImmune) return true;
         if (tile.tileTrait == TraitType.Ice && IceImmune) return true;
         return false;
+    }
+
+    void TriggerHpDamageFlash()
+    {
+        if (hpFlashTimer > 0f) return;
+        hpFlashTimer = flashCooldown;
+        ScreenShake.Shake();
+        FlashUI(hpDamageFlash);
+    }
+
+    void TriggerHotDamageFlash()
+    {
+        if (hotFlashTimer > 0f) return;
+        hotFlashTimer = flashCooldown;
+        FlashUI(hotDamageFlash);
+    }
+
+    void TriggerFreezeDamageFlash()
+    {
+        if (coldFlashTimer > 0f) return;
+        coldFlashTimer = flashCooldown;
+        FlashUI(freezeDamageFlash);
+    }
+
+    void FlashUI(GameObject go)
+    {
+        if (go == null) return;
+        var cg = go.GetComponent<CanvasGroup>();
+        if (cg == null) cg = go.AddComponent<CanvasGroup>();
+        cg.DOKill();
+        cg.alpha = 1f;
+        cg.DOFade(0f, flashDuration).SetEase(Ease.OutQuad);
     }
 
     float Smoothstep(float a, float b, float x)
