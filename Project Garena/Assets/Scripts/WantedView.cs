@@ -12,6 +12,7 @@ public class WantedView : MonoBehaviour
     public Image traitIcon;
     public Transform traitIconRow;
     public Image traitIconPrefab;
+    public Image customerPortrait;
 
     // Optional: fill bar for time left
     public Image timerFill;
@@ -141,6 +142,13 @@ public class WantedView : MonoBehaviour
             float t = (timeTotal <= 0f) ? 0f : Mathf.Clamp01(timeLeft / timeTotal);
             timerFill.fillAmount = t;
         }
+    }
+
+    public void SetCustomerPortrait(Sprite portrait)
+    {
+        if (customerPortrait == null) return;
+        customerPortrait.sprite = portrait;
+        customerPortrait.enabled = portrait != null;
     }
 
     Sprite ItemSprite(ItemSubType st) => st switch

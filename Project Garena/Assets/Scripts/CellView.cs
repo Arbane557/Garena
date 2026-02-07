@@ -55,6 +55,9 @@ public class CellView : MonoBehaviour
     public float popDuration = 0.18f;
     public float selectPulseScale = 0.06f;
     public float selectPulseDuration = 0.12f;
+    [Header("Slide Visuals")]
+    public GameObject slideTrail;
+    public float slideTrailSeconds = 0.2f;
     [Header("Submit Tween")]
     public float submitTweenUp = 24f;
     public float submitTweenDuration = 0.2f;
@@ -281,7 +284,34 @@ public class CellView : MonoBehaviour
     {
         var rt = mainIcon.rectTransform;
         rt.DOKill();
-        rt.anchoredPosition = baseOffset;
+
+        var grid = GetComponentInParent<GridLayoutGroup>();
+        Vector2 cellSize = grid != null ? grid.cellSize : new Vector2(40, 40);
+        Vector2 spacing = grid != null ? grid.spacing : Vector2.zero;
+        Vector2 step = cellSize + spacing;
+
+        Vector2 deltaCells = new Vector2(fromPos.x - cellPos.x, fromPos.y - cellPos.y);
+        Vector2 startOffset = baseOffset + new Vector2(deltaCells.x * step.x, -deltaCells.y * step.y);
+
+        rt.anchoredPosition = startOffset;
+
+        float dist = Mathf.Abs(deltaCells.x) + Mathf.Abs(deltaCells.y);
+        float dur = Mathf.Max(0.01f, moveTweenSeconds * Mathf.Max(1f, dist));
+        rt.DOAnchorPos(baseOffset, dur).SetEase(moveEase);
+
+        if (dist > 1f) ActivateSlideTrail(dur);
+    }
+
+    void ActivateSlideTrail(float duration)
+    {
+        if (slideTrail == null) return;
+        slideTrail.SetActive(true);
+        slideTrail.transform.DOKill();
+        slideTrail.transform.SetParent(transform, false);
+        DOVirtual.DelayedCall(Mathf.Max(slideTrailSeconds, duration), () =>
+        {
+            if (slideTrail != null) slideTrail.SetActive(false);
+        });
     }
 
     Sprite BoxSprite(ItemSubType st)

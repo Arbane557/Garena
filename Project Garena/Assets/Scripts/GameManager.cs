@@ -251,6 +251,7 @@ public class GameManager : MonoBehaviour
     private float customerGhostTimer = 0f;
     private string currentCustomerFlavor = null;
     private string currentCustomerName = null;
+    private Sprite currentCustomerPortrait = null;
     private bool[] fireAuraCache;
     private bool[] iceAuraCache;
     private bool[] hauntedAuraCache;
@@ -858,6 +859,7 @@ public class GameManager : MonoBehaviour
         Debug.Log($"[Customer] Start {level.id}");
         currentCustomerFlavor = level.flavorLine;
         currentCustomerName = level.displayName;
+        currentCustomerPortrait = level.portrait;
         UpdateInteractTutorial();
         UpdatePortalsForLevel(level);
 
@@ -2882,7 +2884,8 @@ int Project(Vector2Int p, Vector2Int dir)
         if (currentOrder != null)
         {
             if (orderTimerText != null) orderTimerText.text = $"{Mathf.CeilToInt(currentOrder.timeLeft)}";
-            wantedView?.SetWanted(currentOrder.subType, currentOrder.requiredTraits, currentOrder.timeLeft, orderLifetime, currentCustomerName, currentCustomerFlavor);
+        wantedView?.SetWanted(currentOrder.subType, currentOrder.requiredTraits, currentOrder.timeLeft, orderLifetime, currentCustomerName, currentCustomerFlavor);
+        wantedView?.SetCustomerPortrait(currentCustomerPortrait);
         }
 
         bufferView?.Set(conveyor.ToArray());
@@ -3415,6 +3418,7 @@ int Project(Vector2Int p, Vector2Int dir)
         public string id;
         public string displayName;
         public string flavorLine;
+        public Sprite portrait;
         public List<OrderSpec> orders = new List<OrderSpec>();
         public bool enableChaosSpawns = false;
         public bool enableFireSpawns = false;

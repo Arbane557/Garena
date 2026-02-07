@@ -1,0 +1,442 @@
+fileFormatVersion: 2
+guid: 9e4f9a42fcb1ddd4d839136ce74d4ae9
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 7983181619735543822
+    second: Valery angry-Sheet_0
+  - first:
+      213: 2130943156168285249
+    second: Valery angry-Sheet_1
+  - first:
+      213: -8521923444774214168
+    second: Valery angry-Sheet_2
+  - first:
+      213: 5432647774993883497
+    second: Valery angry-Sheet_3
+  - first:
+      213: -3290849539797100180
+    second: Valery angry-Sheet_4
+  - first:
+      213: 3768209332975173418
+    second: Valery angry-Sheet_5
+  - first:
+      213: -9007836447396497696
+    second: Valery angry-Sheet_6
+  - first:
+      213: 5844800649048029279
+    second: Valery angry-Sheet_7
+  - first:
+      213: 5728173980370380166
+    second: Valery angry-Sheet_8
+  - first:
+      213: 6938116328786737371
+    second: Valery angry-Sheet_9
+  - first:
+      213: -6735255613011477535
+    second: Valery angry-Sheet_10
+  - first:
+      213: -7311262088784195696
+    second: Valery angry-Sheet_11
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Valery angry-Sheet_0
+      rect:
+        serializedVersion: 2
+        x: 167
+        y: 10
+        width: 151
+        height: 143
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e00c3cde265f9ce60800000000000000
+      internalID: 7983181619735543822
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Valery angry-Sheet_1
+      rect:
+        serializedVersion: 2
+        x: 323
+        y: 9
+        width: 153
+        height: 145
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 14cd5f3a281a29d10800000000000000
+      internalID: 2130943156168285249
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Valery angry-Sheet_2
+      rect:
+        serializedVersion: 2
+        x: 453
+        y: 141
+        width: 16
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8e5e82f27cb0cb980800000000000000
+      internalID: -8521923444774214168
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Valery angry-Sheet_3
+      rect:
+        serializedVersion: 2
+        x: 453
+        y: 130
+        width: 25
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 961a3523e54a46b40800000000000000
+      internalID: 5432647774993883497
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Valery angry-Sheet_4
+      rect:
+        serializedVersion: 2
+        x: 487
+        y: 10
+        width: 151
+        height: 143
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c69d22b77cd8452d0800000000000000
+      internalID: -3290849539797100180
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Valery angry-Sheet_5
+      rect:
+        serializedVersion: 2
+        x: 611
+        y: 140
+        width: 16
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a2ffb4b6c6e5b4430800000000000000
+      internalID: 3768209332975173418
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Valery angry-Sheet_6
+      rect:
+        serializedVersion: 2
+        x: 643
+        y: 9
+        width: 153
+        height: 145
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0e67d160a7cbdf280800000000000000
+      internalID: -9007836447396497696
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Valery angry-Sheet_7
+      rect:
+        serializedVersion: 2
+        x: 773
+        y: 141
+        width: 16
+        height: 15
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f58fa752937ec1150800000000000000
+      internalID: 5844800649048029279
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Valery angry-Sheet_8
+      rect:
+        serializedVersion: 2
+        x: 773
+        y: 130
+        width: 25
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 685ac9fc2ef8e7f40800000000000000
+      internalID: 5728173980370380166
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Valery angry-Sheet_9
+      rect:
+        serializedVersion: 2
+        x: 807
+        y: 10
+        width: 151
+        height: 143
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: bd8bba39a04294060800000000000000
+      internalID: 6938116328786737371
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Valery angry-Sheet_10
+      rect:
+        serializedVersion: 2
+        x: 15
+        y: 19
+        width: 90
+        height: 105
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1ebbef274b09782a0800000000000000
+      internalID: -6735255613011477535
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Valery angry-Sheet_11
+      rect:
+        serializedVersion: 2
+        x: 975
+        y: 19
+        width: 90
+        height: 105
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 09fcc32fddd298a90800000000000000
+      internalID: -7311262088784195696
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Valery angry-Sheet_0: 7983181619735543822
+      Valery angry-Sheet_1: 2130943156168285249
+      Valery angry-Sheet_10: -6735255613011477535
+      Valery angry-Sheet_11: -7311262088784195696
+      Valery angry-Sheet_2: -8521923444774214168
+      Valery angry-Sheet_3: 5432647774993883497
+      Valery angry-Sheet_4: -3290849539797100180
+      Valery angry-Sheet_5: 3768209332975173418
+      Valery angry-Sheet_6: -9007836447396497696
+      Valery angry-Sheet_7: 5844800649048029279
+      Valery angry-Sheet_8: 5728173980370380166
+      Valery angry-Sheet_9: 6938116328786737371
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
