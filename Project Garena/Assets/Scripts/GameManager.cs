@@ -667,9 +667,6 @@ public class GameManager : MonoBehaviour
                 flavorLine = "I have a long road ahead. Keep it simple.",
                 orders = new List<OrderSpec>
                 {
-                    OrderSpec.Of(ItemSubType.Bread),
-                    OrderSpec.Of(ItemSubType.WaterBottle),
-                    OrderSpec.Of(ItemSubType.Knife),
                     OrderSpec.Of(ItemSubType.Bread)
                 },
                 enableChaosSpawns = false,
@@ -682,8 +679,6 @@ public class GameManager : MonoBehaviour
                 flavorLine = "Bread and blades. I burn through both.",
                 orders = new List<OrderSpec>
                 {
-                    OrderSpec.Of(ItemSubType.Bread),
-                    OrderSpec.Of(ItemSubType.Knife),
                     OrderSpec.Of(ItemSubType.Bread),
                     OrderSpec.Of(ItemSubType.Knife)
                 },
@@ -699,8 +694,7 @@ public class GameManager : MonoBehaviour
                 {
                     OrderSpec.Of(ItemSubType.Knife),
                     OrderSpec.Of(ItemSubType.WaterBottle),
-                    OrderSpec.Of(ItemSubType.Bread),
-                    OrderSpec.Of(ItemSubType.Knife)
+                    OrderSpec.Of(ItemSubType.Bread)
                 },
                 enableChaosSpawns = false,
                 enableGhostSpawns = true,
@@ -716,8 +710,7 @@ public class GameManager : MonoBehaviour
                 {
                     OrderSpec.Of(ItemSubType.Bread, TraitType.Fire),
                     OrderSpec.Of(ItemSubType.Knife, TraitType.Fire),
-                    OrderSpec.Of(ItemSubType.WaterBottle, TraitType.Fire),
-                    OrderSpec.Of(ItemSubType.Bread, TraitType.Fire)
+                    OrderSpec.Of(ItemSubType.WaterBottle, TraitType.Fire)
                 },
                 enableChaosSpawns = false,
                 enableFireSpawns = true,
@@ -736,8 +729,7 @@ public class GameManager : MonoBehaviour
                 {
                     OrderSpec.Of(ItemSubType.Bread, TraitType.Ice),
                     OrderSpec.Of(ItemSubType.Knife, TraitType.Ice),
-                    OrderSpec.Of(ItemSubType.WaterBottle, TraitType.Ice),
-                    OrderSpec.Of(ItemSubType.Bread, TraitType.Ice)
+                    OrderSpec.Of(ItemSubType.WaterBottle, TraitType.Ice)
                 },
                 enableChaosSpawns = false,
                 enableIceSpawns = false,
