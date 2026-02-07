@@ -230,7 +230,7 @@ MonoBehaviour:
   breadSprite: {fileID: 21300000, guid: c5eb435f9bc17524ea754997c5f9610c, type: 3}
   knifeSprite: {fileID: 21300000, guid: 76e3019793f0ddc40a0df95fbc587e07, type: 3}
   waterBottleSprite: {fileID: 21300000, guid: d3f2e87195a00b04d89dd10b601d9239, type: 3}
-  ghostSprite: {fileID: 21300000, guid: a5b4534dad2e3fc42b0e962786192b27, type: 3}
+  ghostSprite: {fileID: 224562474707688253, guid: a6a9db375518ab94ab1984ae2c844af8, type: 3}
   fireSprite: {fileID: 21300000, guid: 0d8dcbf33b200104bae8640ce5e2ff59, type: 3}
   iceSprite: {fileID: 21300000, guid: 546db8a9b2dfaeb48b0a8db70a751350, type: 3}
   sentientSprite: {fileID: 21300000, guid: aff924d8775855c4b8a68346c3800e1f, type: 3}

@@ -23,7 +23,7 @@ public class CellView : MonoBehaviour
     public Sprite breadSprite;
     public Sprite knifeSprite;
     public Sprite waterBottleSprite;
-    public Sprite ghostSprite;
+    public GameObject ghostSprite;
 
     public Sprite fireSprite;
     public Sprite iceSprite;
@@ -130,7 +130,11 @@ public class CellView : MonoBehaviour
         }
 
         mainIcon.enabled = true;
-        mainIcon.sprite = BoxSprite(e.subType);
+        var pickedsprite = BoxSprite(e.subType);
+        if (pickedsprite == null) { var spawnedGhost = Instantiate(ghostSprite, transform.position, Quaternion.identity);
+            spawnedGhost.transform.SetParent(transform);
+        }
+        else mainIcon.sprite = pickedsprite;
         ApplySize(e.size);
         AnimateMove(cellPos, fromPos);
 
@@ -213,7 +217,6 @@ public class CellView : MonoBehaviour
             ItemSubType.Bread => breadSprite,
             ItemSubType.Knife => knifeSprite,
             ItemSubType.WaterBottle => waterBottleSprite,
-            ItemSubType.Ghost => ghostSprite,
             _ => null
         };
     }

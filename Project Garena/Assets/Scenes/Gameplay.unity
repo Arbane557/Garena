@@ -3908,6 +3908,14 @@ MonoBehaviour:
   minOrderTraits: 1
   maxOrderTraits: 2
   customerLevels: []
+  tutorialSpeakerName: Guide
+  tutorialBeforeFirst:
+  - Welcome. Keep items organized and watch the order box.
+  - Use the grid to move items and fulfill requests.
+  - You'll learn the rest the hard way.
+  tutorialAfterBaker:
+  - Something feels off. The air is getting hotter.
+  - Be ready for orders that don't make sense.
   ordersBeforeChaos: 8
   initialItemCount: 6
   spawnInitialItems: 1
@@ -4080,6 +4088,8 @@ MonoBehaviour:
   canvasGroup: {fileID: 1911440963}
   charDelay: 0.03
   holdSeconds: 1.5
+  autoAdvanceDialogue: 1
+  advanceOnEnter: 0
 --- !u!225 &1911440963
 CanvasGroup:
   m_ObjectHideFlags: 0
