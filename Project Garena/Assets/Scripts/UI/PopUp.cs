@@ -242,6 +242,4 @@ public class PopUp : MonoBehaviour
         text.alignment = TextAlignmentOptions.MidlineLeft;
         text.color = Color.white;
     }
-
-    // Auto-create removed on request
 }
