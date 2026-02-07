@@ -2730,6 +2730,20 @@ MonoBehaviour:
   orderLifetime: 12
   minOrderTraits: 1
   maxOrderTraits: 2
+  ordersBeforeChaos: 7
+  initialItemCount: 18
+  spawnInitialItems: 1
+  spawnInitialTraits: 0
+  allowTraitTilesBeforeChaos: 0
+  allowGhostsBeforeChaos: 0
+  forceFirstChaosOrder: 1
+  initialSpawnBottomRows: 3
+  initialSpawnClusterRadius: 2
+  chaosTint: {fileID: 0}
+  chaosTintAlpha: 0.25
+  chaosTintFlashSeconds: 0.35
+  chaosTraitSpawnDelay: 16
+  chaosGhostSpawnDelay: 16
   maxGhosts: 3
   ghostSpawnInterval: 4
   ghostMergeSeconds: 2

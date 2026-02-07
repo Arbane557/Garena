@@ -61,6 +61,9 @@ public class GameManager : MonoBehaviour
     [Range(0, 3)] public int minOrderTraits = 1;
     [Range(0, 3)] public int maxOrderTraits = 2;
 
+    [Header("Customers")]
+    public List<CustomerLevel> customerLevels = new List<CustomerLevel>();
+
     [Header("Progression")]
     public int ordersBeforeChaos = 7;
     public int initialItemCount = 18;
@@ -115,10 +118,15 @@ public class GameManager : MonoBehaviour
     public float heatOverload = 24f;
     public float coldOverload = 20f;
 
+    [Header("Fire Aura")]
+    public float fireAuraDamagePerSecond = 6f;
+
     // STATE
     private BoxEntity[] grid;
     private List<Vector2Int> deliveryZones = new List<Vector2Int>();
     private Queue<ItemSubType> conveyor = new Queue<ItemSubType>();
+    private List<ItemSubType> itemBag = new List<ItemSubType>();
+    private ItemSubType? lastQueuedItem = null;
     private Vector2Int selector = new Vector2Int(0, 0);
 
     private string status = "System Stable";
@@ -144,10 +152,18 @@ public class GameManager : MonoBehaviour
     private float glitchTimer = 0f;
     public float glitchInterval = 6f;
     [Range(0f, 1f)] public float glitchChance = 0.08f;
-    private int ordersCompleted = 0;
     private bool chaosUnlocked = false;
-    private bool chaosOrderPending = false;
     private float chaosTimer = 0f;
+    private int currentCustomerIndex = 0;
+    private int currentCustomerOrderIndex = 0;
+    private float customerFireTimer = 0f;
+    private float fireSpreadTimer = 0f;
+    private float customerIceTimer = 0f;
+    private string currentCustomerFlavor = null;
+    private string currentCustomerName = null;
+    private bool[] fireAuraCache;
+    private bool[] iceAuraCache;
+    private Dictionary<string, float> iceAuraTime = new Dictionary<string, float>();
 
     public List<Ghost> ghosts = new List<Ghost>();
 
@@ -173,7 +189,8 @@ public class GameManager : MonoBehaviour
         InitConveyor();
         if (spawnInitialItems) InitInitialItems();
         if (spawnInitialTraits) InitInitialTraits();      // optional (spawns initial traits on boxes if you want, else remove)
-        GenerateNewOrder();
+        EnsureCustomerLevels();
+        StartCustomerLevel(0);
         PlayBgm("BGM");
 
         RenderAll();
@@ -196,9 +213,16 @@ public class GameManager : MonoBehaviour
         }
 
         UpdateLocksAndRegen(Time.deltaTime);
+        UpdateFireAuraDamage(Time.deltaTime);
 
         // Order system
         UpdateOrder(Time.deltaTime);
+
+        // Customer level fire gimmick
+        UpdateCustomerFire(Time.deltaTime);
+        UpdateFireSpread(Time.deltaTime);
+        UpdateCustomerIce(Time.deltaTime);
+        UpdateIceAura(Time.deltaTime);
 
         // Fire expiry
         UpdateFireTimers(Time.deltaTime);
@@ -283,6 +307,7 @@ public class GameManager : MonoBehaviour
         conveyor.Enqueue(ItemSubType.Bread);
         conveyor.Enqueue(ItemSubType.Knife);
         conveyor.Enqueue(ItemSubType.WaterBottle);
+        RefillItemBag();
         bufferView?.Set(conveyor.ToArray());
     }
 
@@ -419,8 +444,8 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        // Haunted items invert control
-        if (box.Has(TraitType.Haunted))
+        // Haunted/Sentient items invert control
+        if (box.Has(TraitType.Haunted) || box.Has(TraitType.Sentient))
         {
             dir = -dir;
         }
@@ -498,7 +523,11 @@ public class GameManager : MonoBehaviour
             var p = IdxToPos(idx);
             var e = grid[idx];
             var from = (e != null && lastAnchor.TryGetValue(e.id, out var prev)) ? prev : p;
-            cells[idx].SetCell(grid[idx], p == selector, false, p, from);
+            BuildFireAuraCache();
+            bool inFireAura = fireAuraCache != null && idx >= 0 && idx < fireAuraCache.Length && fireAuraCache[idx];
+            BuildIceAuraCache();
+            bool inIceAura = iceAuraCache != null && idx >= 0 && idx < iceAuraCache.Length && iceAuraCache[idx];
+            cells[idx].SetCell(grid[idx], p == selector, false, inFireAura, inIceAura, p, from);
             RenderHud();
         }
         else
@@ -559,28 +588,439 @@ public class GameManager : MonoBehaviour
 
     void GenerateNewOrder()
     {
-        if (chaosOrderPending)
+        if (customerLevels == null || customerLevels.Count == 0)
         {
-            chaosOrderPending = false;
-            currentOrder = new Order
-            {
-                subType = ItemSubType.Knife,
-                requiredTraits = new List<TraitType> { TraitType.Fire },
-                timeLeft = orderLifetime
-            };
-            wantedView?.SetWanted(currentOrder.subType, currentOrder.requiredTraits, currentOrder.timeLeft, orderLifetime);
+            currentOrder = null;
+            return;
+        }
+        var level = customerLevels[Mathf.Clamp(currentCustomerIndex, 0, customerLevels.Count - 1)];
+        if (level.orders == null || level.orders.Count == 0)
+        {
+            currentOrder = null;
             return;
         }
 
-        var traits = chaosUnlocked ? RandomRequiredTraits() : new List<TraitType>();
+        currentCustomerOrderIndex = Mathf.Clamp(currentCustomerOrderIndex, 0, level.orders.Count - 1);
+        var spec = level.orders[currentCustomerOrderIndex];
         currentOrder = new Order
         {
-            subType = RandomItemType(),
-            requiredTraits = traits,
+            subType = spec.subType,
+            requiredTraits = new List<TraitType>(spec.requiredTraits ?? new List<TraitType>()),
             timeLeft = orderLifetime
         };
 
-        wantedView?.SetWanted(currentOrder.subType, currentOrder.requiredTraits, currentOrder.timeLeft, orderLifetime);
+        wantedView?.SetWanted(currentOrder.subType, currentOrder.requiredTraits, currentOrder.timeLeft, orderLifetime, currentCustomerName, currentCustomerFlavor);
+    }
+
+    void EnsureCustomerLevels()
+    {
+        if (customerLevels != null && customerLevels.Count > 0) return;
+
+        customerLevels = new List<CustomerLevel>
+        {
+            new CustomerLevel
+            {
+                id = "traveler",
+                displayName = "Wandering Traveler",
+                flavorLine = "I have a long road ahead. Keep it simple.",
+                orders = new List<OrderSpec>
+                {
+                    OrderSpec.Of(ItemSubType.Bread),
+                    OrderSpec.Of(ItemSubType.WaterBottle),
+                    OrderSpec.Of(ItemSubType.Knife),
+                    OrderSpec.Of(ItemSubType.Bread)
+                },
+                enableChaosSpawns = false,
+                enableFireSpawns = false
+            },
+            new CustomerLevel
+            {
+                id = "baker",
+                displayName = "Village Baker",
+                flavorLine = "Bread and blades. I burn through both.",
+                orders = new List<OrderSpec>
+                {
+                    OrderSpec.Of(ItemSubType.Bread),
+                    OrderSpec.Of(ItemSubType.Knife),
+                    OrderSpec.Of(ItemSubType.Bread)
+                },
+                enableChaosSpawns = false,
+                enableFireSpawns = false
+            },
+            new CustomerLevel
+            {
+                id = "fire_mage",
+                displayName = "Fire Mage",
+                flavorLine = "Heat it. Temper it. Bring it to me.",
+                orders = new List<OrderSpec>
+                {
+                    OrderSpec.Of(ItemSubType.Bread, TraitType.Fire),
+                    OrderSpec.Of(ItemSubType.Knife, TraitType.Fire),
+                    OrderSpec.Of(ItemSubType.WaterBottle, TraitType.Fire)
+                },
+                enableChaosSpawns = false,
+                enableFireSpawns = true,
+                fireSpawnInterval = 8f,
+                fireBurstCount = 2,
+                enableFireSpread = true,
+                fireSpreadInterval = 8f,
+                fireSpreadChance = 0.25f
+            },
+            new CustomerLevel
+            {
+                id = "ice_mage",
+                displayName = "Ice Mage",
+                flavorLine = "Freeze it. Seal it. Let it linger.",
+                orders = new List<OrderSpec>
+                {
+                    OrderSpec.Of(ItemSubType.Bread, TraitType.Ice),
+                    OrderSpec.Of(ItemSubType.Knife, TraitType.Ice),
+                    OrderSpec.Of(ItemSubType.WaterBottle, TraitType.Ice)
+                },
+                enableChaosSpawns = false,
+                enableIceSpawns = false,
+                iceSpawnInterval = 8f,
+                iceBurstCount = 10,
+                spawnInitialIceBurst = true,
+                enableIceAura = true,
+                iceToItemSeconds = 2f
+            }
+        };
+    }
+
+    void StartCustomerLevel(int levelIndex)
+    {
+        if (customerLevels == null || customerLevels.Count == 0) return;
+
+        currentCustomerIndex = Mathf.Clamp(levelIndex, 0, customerLevels.Count - 1);
+        currentCustomerOrderIndex = 0;
+        var level = customerLevels[currentCustomerIndex];
+        currentCustomerFlavor = level.flavorLine;
+        currentCustomerName = level.displayName;
+
+        chaosUnlocked = level.enableChaosSpawns;
+        chaosTimer = 0f;
+        customerFireTimer = 0f;
+        fireSpreadTimer = 0f;
+        customerIceTimer = 0f;
+        iceAuraTime.Clear();
+
+        if (level.enableFireSpawns)
+        {
+            int burst = Mathf.Max(1, level.fireBurstCount);
+            for (int i = 0; i < burst; i++)
+            {
+                TrySpawnTraitTile(TraitType.Fire);
+            }
+        }
+
+        if (level.enableIceSpawns || level.spawnInitialIceBurst)
+        {
+            ClearAllFire();
+            int burst = Mathf.Max(1, level.iceBurstCount);
+            for (int i = 0; i < burst; i++)
+            {
+                TrySpawnTraitTile(TraitType.Ice);
+            }
+        }
+
+        GenerateNewOrder();
+    }
+
+    void AdvanceCustomerOrder()
+    {
+        if (customerLevels == null || customerLevels.Count == 0)
+        {
+            currentOrder = null;
+            return;
+        }
+
+        var level = customerLevels[currentCustomerIndex];
+        currentCustomerOrderIndex++;
+        if (level.orders == null || currentCustomerOrderIndex >= level.orders.Count)
+        {
+            int nextLevel = currentCustomerIndex + 1;
+            if (nextLevel < customerLevels.Count)
+            {
+                StartCustomerLevel(nextLevel);
+                return;
+            }
+
+            // No more customers for now.
+            currentOrder = null;
+            status = "NO MORE CUSTOMERS";
+            RenderHud();
+            return;
+        }
+
+        GenerateNewOrder();
+    }
+
+    void UpdateCustomerFire(float dt)
+    {
+        if (customerLevels == null || customerLevels.Count == 0) return;
+        var level = customerLevels[currentCustomerIndex];
+        if (!level.enableFireSpawns) return;
+
+        float interval = Mathf.Max(0.5f, level.fireSpawnInterval);
+        customerFireTimer += dt;
+        if (customerFireTimer >= interval)
+        {
+            customerFireTimer = 0f;
+            int burst = Mathf.Max(1, level.fireBurstCount);
+            for (int i = 0; i < burst; i++)
+            {
+                TrySpawnTraitTile(TraitType.Fire);
+            }
+        }
+    }
+
+    void UpdateCustomerIce(float dt)
+    {
+        if (customerLevels == null || customerLevels.Count == 0) return;
+        var level = customerLevels[currentCustomerIndex];
+        if (!level.enableIceSpawns) return;
+
+        float interval = Mathf.Max(0.5f, level.iceSpawnInterval);
+        customerIceTimer += dt;
+        if (customerIceTimer >= interval)
+        {
+            customerIceTimer = 0f;
+            int burst = Mathf.Max(1, level.iceBurstCount);
+            for (int i = 0; i < burst; i++)
+            {
+                TrySpawnTraitTile(TraitType.Ice);
+            }
+        }
+    }
+
+    void UpdateIceAura(float dt)
+    {
+        if (customerLevels == null || customerLevels.Count == 0) return;
+        var level = customerLevels[currentCustomerIndex];
+        if (!level.enableIceAura) return;
+
+        BuildIceAuraCache();
+
+        var alive = new HashSet<string>();
+        foreach (var e in EnumerateEntities())
+        {
+            if (e == null) continue;
+            if (IsTraitTile(e) || IsGhost(e)) continue;
+
+            alive.Add(e.id);
+            int idx = PosToIdx(e.anchor);
+            bool inAura = iceAuraCache != null && idx >= 0 && idx < iceAuraCache.Length && iceAuraCache[idx];
+
+            if (!inAura)
+            {
+                if (iceAuraTime.ContainsKey(e.id)) iceAuraTime.Remove(e.id);
+                continue;
+            }
+
+            if (!iceAuraTime.TryGetValue(e.id, out float t))
+            {
+                t = 0f;
+            }
+            t += dt;
+            iceAuraTime[e.id] = t;
+
+            if (t >= level.iceToItemSeconds && !e.Has(TraitType.Ice))
+            {
+                e.AddTrait(TraitType.Ice);
+                RenderAll();
+            }
+        }
+
+        if (iceAuraTime.Count > 0)
+        {
+            var dead = new List<string>();
+            foreach (var kv in iceAuraTime)
+            {
+                if (!alive.Contains(kv.Key)) dead.Add(kv.Key);
+            }
+            foreach (var id in dead) iceAuraTime.Remove(id);
+        }
+    }
+
+    void UpdateFireSpread(float dt)
+    {
+        if (customerLevels == null || customerLevels.Count == 0) return;
+        var level = customerLevels[currentCustomerIndex];
+        if (!level.enableFireSpread) return;
+
+        float interval = Mathf.Max(0.5f, level.fireSpreadInterval);
+        fireSpreadTimer += dt;
+        if (fireSpreadTimer < interval) return;
+        fireSpreadTimer = 0f;
+
+        if (rng.NextDouble() > level.fireSpreadChance) return;
+
+        var fireTiles = new List<Vector2Int>();
+        foreach (var e in EnumerateEntities())
+        {
+            if (e == null) continue;
+            if (IsTraitTile(e) && e.tileTrait == TraitType.Fire)
+            {
+                fireTiles.Add(e.anchor);
+            }
+        }
+
+        if (fireTiles.Count == 0) return;
+        var origin = fireTiles[rng.Next(0, fireTiles.Count)];
+        var dirs = new[]
+        {
+            new Vector2Int(1,0), new Vector2Int(-1,0),
+            new Vector2Int(0,1), new Vector2Int(0,-1)
+        };
+        // shuffle
+        for (int i = 0; i < dirs.Length; i++)
+        {
+            int j = rng.Next(i, dirs.Length);
+            (dirs[i], dirs[j]) = (dirs[j], dirs[i]);
+        }
+
+        foreach (var d in dirs)
+        {
+            var p = origin + d;
+            if (!InBounds(p)) continue;
+
+            int idx = PosToIdx(p);
+            var target = grid[idx];
+            if (target == null)
+            {
+                var t = BoxEntity.CreateTraitTile(TraitType.Fire);
+                t.size = Vector2Int.one;
+                PlaceEntity(t, p);
+                PlaySfx("burning");
+                break;
+            }
+
+            if (!IsTraitTile(target) && !IsGhost(target) && !target.Has(TraitType.Fire))
+            {
+                target.AddTrait(TraitType.Fire);
+                target.fireTimer = 2f;
+                PlaySfx("burning");
+                break;
+            }
+        }
+    }
+
+    void ExtinguishFireInArea(Vector2Int center, int radius)
+    {
+        for (int dy = -radius; dy <= radius; dy++)
+        for (int dx = -radius; dx <= radius; dx++)
+        {
+            var p = center + new Vector2Int(dx, dy);
+            if (!InBounds(p)) continue;
+            var e = grid[PosToIdx(p)];
+            if (e == null) continue;
+
+            if (IsTraitTile(e) && e.tileTrait == TraitType.Fire)
+            {
+                RemoveEntity(e);
+                continue;
+            }
+
+            if (e.Has(TraitType.Fire))
+            {
+                e.traits.Remove(TraitType.Fire);
+                e.fireTimer = 0f;
+            }
+        }
+    }
+
+    void ClearAllFire()
+    {
+        foreach (var e in EnumerateEntities())
+        {
+            if (e == null) continue;
+            if (IsTraitTile(e) && e.tileTrait == TraitType.Fire)
+            {
+                RemoveEntity(e);
+                continue;
+            }
+            if (e.Has(TraitType.Fire))
+            {
+                e.traits.Remove(TraitType.Fire);
+                e.fireTimer = 0f;
+            }
+        }
+    }
+
+    void BuildFireAuraCache()
+    {
+        if (fireAuraCache == null || fireAuraCache.Length != grid.Length)
+        {
+            fireAuraCache = new bool[grid.Length];
+        }
+        else
+        {
+            System.Array.Clear(fireAuraCache, 0, fireAuraCache.Length);
+        }
+
+        foreach (var e in EnumerateEntities())
+        {
+            if (e == null) continue;
+            if (!IsTraitTile(e) || e.tileTrait != TraitType.Fire) continue;
+
+            var center = e.anchor;
+            if (InBounds(center)) fireAuraCache[PosToIdx(center)] = true;
+            var dirs = new[]
+            {
+                new Vector2Int(1,0), new Vector2Int(-1,0),
+                new Vector2Int(0,1), new Vector2Int(0,-1)
+            };
+            foreach (var d in dirs)
+            {
+                var p = center + d;
+                if (!InBounds(p)) continue;
+                fireAuraCache[PosToIdx(p)] = true;
+            }
+        }
+    }
+
+    void BuildIceAuraCache()
+    {
+        if (iceAuraCache == null || iceAuraCache.Length != grid.Length)
+        {
+            iceAuraCache = new bool[grid.Length];
+        }
+        else
+        {
+            System.Array.Clear(iceAuraCache, 0, iceAuraCache.Length);
+        }
+
+        foreach (var e in EnumerateEntities())
+        {
+            if (e == null) continue;
+            if (!IsTraitTile(e) || e.tileTrait != TraitType.Ice) continue;
+
+            var center = e.anchor;
+            if (InBounds(center)) iceAuraCache[PosToIdx(center)] = true;
+            var dirs = new[]
+            {
+                new Vector2Int(1,0), new Vector2Int(-1,0),
+                new Vector2Int(0,1), new Vector2Int(0,-1)
+            };
+            foreach (var d in dirs)
+            {
+                var p = center + d;
+                if (!InBounds(p)) continue;
+                iceAuraCache[PosToIdx(p)] = true;
+            }
+        }
+    }
+
+    void UpdateFireAuraDamage(float dt)
+    {
+        if (FireImmune) return;
+        BuildFireAuraCache();
+        int idx = PosToIdx(selector);
+        if (fireAuraCache != null && idx >= 0 && idx < fireAuraCache.Length && fireAuraCache[idx])
+        {
+            L_hp = Mathf.Min(L_hp_cap, L_hp + fireAuraDamagePerSecond * dt);
+        }
     }
 
     void AttemptSubmit(BoxEntity box, bool bypassZone)
@@ -605,12 +1045,6 @@ public class GameManager : MonoBehaviour
             L_hp = Mathf.Max(0f, L_hp - healGood);
             status = "ORDER FULFILLED";
             PlaySfx("submitsuccess");
-
-            ordersCompleted++;
-            if (!chaosUnlocked && ordersCompleted >= ordersBeforeChaos)
-            {
-                TriggerChaos();
-            }
         }
         else
         {
@@ -628,18 +1062,7 @@ public class GameManager : MonoBehaviour
         {
             SpawnGhostAt(spawnPos);
         }
-        if (chaosOrderPending)
-        {
-            GenerateNewOrder();
-        }
-        else if (rng.NextDouble() < 0.1)
-        {
-            status = "CUSTOMER CHANGED MIND";
-        }
-        else
-        {
-            GenerateNewOrder();
-        }
+        AdvanceCustomerOrder();
         // no delivery zones
         RenderAll();
     }
@@ -1354,8 +1777,37 @@ int Project(Vector2Int p, Vector2Int dir)
     {
         var sub = conveyor.Peek();
         conveyor.Dequeue();
-        conveyor.Enqueue(RandomItemType());
+        conveyor.Enqueue(NextFromBag());
         return sub;
+    }
+
+    ItemSubType NextFromBag()
+    {
+        if (itemBag.Count == 0) RefillItemBag();
+        var item = itemBag[0];
+        itemBag.RemoveAt(0);
+        lastQueuedItem = item;
+        return item;
+    }
+
+    void RefillItemBag()
+    {
+        itemBag.Clear();
+        itemBag.Add(ItemSubType.Bread);
+        itemBag.Add(ItemSubType.Knife);
+        itemBag.Add(ItemSubType.WaterBottle);
+        // Shuffle
+        for (int i = 0; i < itemBag.Count; i++)
+        {
+            int j = rng.Next(i, itemBag.Count);
+            (itemBag[i], itemBag[j]) = (itemBag[j], itemBag[i]);
+        }
+        // Avoid immediate repeat across bag boundaries.
+        if (lastQueuedItem.HasValue && itemBag.Count > 1 && itemBag[0] == lastQueuedItem.Value)
+        {
+            int swapIndex = rng.Next(1, itemBag.Count);
+            (itemBag[0], itemBag[swapIndex]) = (itemBag[swapIndex], itemBag[0]);
+        }
     }
 
     List<TraitType> RandomRequiredTraits()
@@ -1378,7 +1830,6 @@ int Project(Vector2Int p, Vector2Int dir)
     void TriggerChaos()
     {
         chaosUnlocked = true;
-        chaosOrderPending = forceFirstChaosOrder;
         chaosTimer = 0f;
         ScreenShake.Shake(0.35f, 14f, 24);
         if (chaosTint != null)
@@ -1563,7 +2014,10 @@ int Project(Vector2Int p, Vector2Int dir)
         bool hasIce = potion.Has(TraitType.Ice);
         if (!hasFire && !hasIce)
         {
-            status = "POTION DOES NOTHING";
+            ExtinguishFireInArea(potion.anchor, radius: 1);
+            status = "SPLASH";
+            RemoveEntity(potion);
+            RenderAll();
             return;
         }
 
@@ -1667,13 +2121,17 @@ int Project(Vector2Int p, Vector2Int dir)
     // ----------------------------
     void RenderAll()
     {
+        BuildFireAuraCache();
+        BuildIceAuraCache();
         for (int i = 0; i < grid.Length; i++)
         {
             var p = IdxToPos(i);
             bool selected = (p == selector);
             var e = grid[i];
             var from = (e != null && lastAnchor.TryGetValue(e.id, out var prev)) ? prev : p;
-            cells[i].SetCell(grid[i], selected, false, p, from);
+            bool inFireAura = fireAuraCache != null && fireAuraCache[i];
+            bool inIceAura = iceAuraCache != null && iceAuraCache[i];
+            cells[i].SetCell(grid[i], selected, false, inFireAura, inIceAura, p, from);
         }
         RenderHud();
         UpdateAnchorCache();
@@ -1711,7 +2169,7 @@ int Project(Vector2Int p, Vector2Int dir)
         if (currentOrder != null)
         {
             if (orderTimerText != null) orderTimerText.text = $"TIME: {Mathf.CeilToInt(currentOrder.timeLeft)}";
-            wantedView?.SetWanted(currentOrder.subType, currentOrder.requiredTraits, currentOrder.timeLeft, orderLifetime);
+            wantedView?.SetWanted(currentOrder.subType, currentOrder.requiredTraits, currentOrder.timeLeft, orderLifetime, currentCustomerName, currentCustomerFlavor);
         }
 
         bufferView?.Set(conveyor.ToArray());
@@ -1839,5 +2297,41 @@ int Project(Vector2Int p, Vector2Int dir)
     void PlayBgm(string id)
     {
         ServiceHub.Get<AudioManager>()?.PlayBgm(id);
+    }
+
+    [Serializable]
+    public class CustomerLevel
+    {
+        public string id;
+        public string displayName;
+        public string flavorLine;
+        public List<OrderSpec> orders = new List<OrderSpec>();
+        public bool enableChaosSpawns = false;
+        public bool enableFireSpawns = false;
+        public float fireSpawnInterval = 8f;
+        public int fireBurstCount = 1;
+        public bool enableFireSpread = false;
+        public float fireSpreadInterval = 4f;
+        [Range(0f, 1f)] public float fireSpreadChance = 0.4f;
+        public bool enableIceSpawns = false;
+        public float iceSpawnInterval = 8f;
+        public int iceBurstCount = 1;
+        public bool spawnInitialIceBurst = false;
+        public bool enableIceAura = false;
+        public float iceToItemSeconds = 2f;
+    }
+
+    [Serializable]
+    public class OrderSpec
+    {
+        public ItemSubType subType;
+        public List<TraitType> requiredTraits = new List<TraitType>();
+
+        public static OrderSpec Of(ItemSubType subType, params TraitType[] traits)
+        {
+            var spec = new OrderSpec { subType = subType };
+            if (traits != null && traits.Length > 0) spec.requiredTraits = new List<TraitType>(traits);
+            return spec;
+        }
     }
 }

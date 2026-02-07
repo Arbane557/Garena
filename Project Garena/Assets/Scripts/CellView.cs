@@ -62,13 +62,15 @@ public class CellView : MonoBehaviour
         }
     }
 
-    public void SetCell(BoxEntity e, bool selected, bool isZone, Vector2Int cellPos, Vector2Int fromPos)
+    public void SetCell(BoxEntity e, bool selected, bool isZone, bool inFireAura, bool inIceAura, Vector2Int cellPos, Vector2Int fromPos)
     {
         // Background / outline
         outline.enabled = selected;
 
         // zone tint (simple)
         if (isZone) background.color = new Color(0.1f, 0.3f, 0.1f, 0.4f);
+        else if (inFireAura) background.color = new Color(0.35f, 0.08f, 0.04f, 1f);
+        else if (inIceAura) background.color = new Color(0.08f, 0.18f, 0.35f, 1f);
         else background.color = new Color(0.12f, 0.12f, 0.12f, 1f);
 
         // Clear
