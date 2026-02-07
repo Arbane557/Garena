@@ -4123,11 +4123,16 @@ MonoBehaviour:
   minOrderTraits: 1
   maxOrderTraits: 2
   customerLevels: []
-  tutorialSpeakerName: Guide
+  tutorialSpeakerName: Old Man
   tutorialBeforeFirst:
   - Welcome. Keep items organized and watch the order box.
-  - Use the grid to move items and fulfill requests.
-  - You'll learn the rest the hard way.
+  - "Top\u2011left is the item conveyor. Press Enter on an empty cell to spawn the
+    next item when you need it."
+  - "WASD moves the grid cursor. Arrow keys moves the item you\u2019re hovering."
+  - "Bottom\u2011right shows what item the customer wants."
+  - Deliver by pushing the item off the top edge through the portal.
+  - Right bar is your reputation. Fail too many orders and the shop shuts down.
+  - That's it. You will learn the rest the hard way.
   tutorialAfterBaker:
   - I hope this line of work is what you expected.
   ordersBeforeChaos: 8
@@ -4305,6 +4310,8 @@ MonoBehaviour:
   minHoldSeconds: 0.25
   autoAdvanceDialogue: 1
   advanceOnEnter: 0
+  talkSfxId: Talk
+  talkEveryNChars: 2
 --- !u!225 &1911440963
 CanvasGroup:
   m_ObjectHideFlags: 0
