@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.InputSystem;
 using TMPro;
+using DG.Tweening;
 
 public class GameManager : MonoBehaviour
 {
@@ -12,7 +13,7 @@ public class GameManager : MonoBehaviour
     public int gridSize = 10;
     public float tickRateSeconds = 1.5f;
     public int deliveryZoneCount = 5;
-    public int initialTraitCount = 12;
+    public int initialTraitCount = 15;
 
     [Header("UI (uGUI + TMP)")]
     public Transform gridParent;
@@ -34,8 +35,8 @@ public class GameManager : MonoBehaviour
     public float orderLifetime = 12f;
 
     [Header("Order Traits")]
-    [Range(0, 3)] public int minOrderTraits = 0;
-    [Range(0, 3)] public int maxOrderTraits = 1;
+    [Range(0, 3)] public int minOrderTraits = 1;
+    [Range(0, 3)] public int maxOrderTraits = 2;
 
     [Header("Ghosts")]
     public int maxGhosts = 4;
@@ -68,6 +69,7 @@ public class GameManager : MonoBehaviour
     private float ghostSpawnTimer = 0f;
     private float traitSpawnTimer = 0f;
     private float itemSpawnTimer = 0f;
+    private float ghostMoveTimer = 0f;
 
     public List<Ghost> ghosts = new List<Ghost>();
 
@@ -105,16 +107,10 @@ public class GameManager : MonoBehaviour
         // Fire expiry
         UpdateFireTimers(Time.deltaTime);
 
-        // Ghosts: aura + movement
+        // Ghosts: timed movement
         UpdateGhosts(Time.deltaTime);
 
-        // Ghost autonomous movement
-        sentientTickTimer += Time.deltaTime;
-        if (sentientTickTimer >= sentientTickInterval)
-        {
-            sentientTickTimer -= sentientTickInterval;
-            SentientTick();
-        }
+        // Ghost movement is handled in UpdateGhosts with tickRateSeconds cadence.
 
         // Timed spawns
         if (ghostSpawnInterval > 0f)
@@ -137,15 +133,7 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        if (itemSpawnInterval > 0f)
-        {
-            itemSpawnTimer += Time.deltaTime;
-            if (itemSpawnTimer >= itemSpawnInterval)
-            {
-                itemSpawnTimer -= itemSpawnInterval;
-                SpawnQueuedAtSelector();
-            }
-        }
+        // Auto drop disabled.
 
         // Ghost adjacency merge
         UpdateGhostMerges(Time.deltaTime);
@@ -241,7 +229,7 @@ public class GameManager : MonoBehaviour
         {
             int idx = PosToIdx(selector);
             var box = grid[idx];
-            if (box != null && !IsTraitTile(box) && IsAtTopBoundary(box))
+            if (box != null && !IsTraitTile(box) && !IsGhost(box) && IsAtTopBoundary(box))
             {
                 AttemptSubmit(box, true);
             }
@@ -266,6 +254,12 @@ public class GameManager : MonoBehaviour
         int curIdx = PosToIdx(selector);
         var box = grid[curIdx];
         if (box == null) return;
+
+        if (IsGhost(box))
+        {
+            status = "GHOSTS ARE UNCONTROLLABLE";
+            return;
+        }
 
         if (IsTraitTile(box))
         {
@@ -320,6 +314,7 @@ public class GameManager : MonoBehaviour
         if (!CanPlaceAt(anchor, size))
         {
             status = "SPAWN BLOCKED";
+            SpawnBlockedFeedback(size);
             return;
         }
 
@@ -355,6 +350,7 @@ public class GameManager : MonoBehaviour
         if (!CanPlaceAt(anchor, size))
         {
             status = "SPAWN BLOCKED";
+            SpawnBlockedFeedback(size);
             return;
         }
         bufferView?.Set(conveyor.ToArray());
@@ -388,7 +384,6 @@ public class GameManager : MonoBehaviour
         {
             reputation -= 10;
             status = "ORDER FAILED";
-            SpawnQueuedAtSelector();
             currentOrder.timeLeft = orderLifetime;
 
             if (reputation <= minReputation) GameOver();
@@ -450,8 +445,8 @@ public class GameManager : MonoBehaviour
 
     void GameOver()
     {
-        status = "GAME OVER";
-        enabled = false;
+        // Disabled: no game over state.
+        status = "GAME OVER (DISABLED)";
         RenderHud();
     }
 
@@ -483,15 +478,40 @@ public class GameManager : MonoBehaviour
     // ----------------------------
     void UpdateGhosts(float dt)
     {
-        foreach (var g in ghosts)
-        {
-            ApplyGhostAura(g);
+        ghostMoveTimer += dt;
+        if (ghostMoveTimer < tickRateSeconds) return;
+        ghostMoveTimer -= tickRateSeconds;
 
-            g.moveTimer += dt;
-            if (g.moveTimer >= g.moveInterval)
+        var movers = new List<BoxEntity>();
+        foreach (var b in EnumerateEntities())
+        {
+            if (b == null) continue;
+            if (IsGhost(b)) movers.Add(b);
+        }
+
+        var dirs = new[]
+        {
+            new Vector2Int(1,0), new Vector2Int(-1,0),
+            new Vector2Int(0,1), new Vector2Int(0,-1)
+        };
+
+        foreach (var ghost in movers.OrderBy(_ => rng.Next()))
+        {
+            if (rng.NextDouble() <= 0.5) continue; // 50% chance to move per tick
+
+            // Shuffle directions
+            for (int k = 0; k < dirs.Length; k++)
             {
-                g.moveTimer -= g.moveInterval;
-                GhostStep(g);
+                int swap = rng.Next(k, dirs.Length);
+                (dirs[k], dirs[swap]) = (dirs[swap], dirs[k]);
+            }
+
+            foreach (var d in dirs)
+            {
+                if (TryMoveEntity(ghost, d, allowPush: false))
+                {
+                    break;
+                }
             }
         }
     }
@@ -546,7 +566,7 @@ public class GameManager : MonoBehaviour
         foreach (var b in EnumerateEntities())
         {
             if (b == null) continue;
-            if (IsGhost(b)) movers.Add(b);
+            // Ghost movement is timer-based in UpdateGhosts, not here.
         }
 
         foreach (var mover in movers.OrderBy(_ => rng.Next()))
@@ -602,91 +622,7 @@ public class GameManager : MonoBehaviour
 
     void UpdateGhostMerges(float dt)
     {
-        var aliveGhosts = new HashSet<string>();
-        var dirs = new[]
-        {
-            new Vector2Int(1,0), new Vector2Int(-1,0),
-            new Vector2Int(0,1), new Vector2Int(0,-1)
-        };
-
-        for (int i = 0; i < grid.Length; i++)
-        {
-            var ghost = grid[i];
-            if (!IsGhost(ghost)) continue;
-
-            aliveGhosts.Add(ghost.id);
-            var p = IdxToPos(i);
-
-            BoxEntity target = null;
-            int targetIdx = -1;
-            foreach (var d in dirs)
-            {
-                var np = p + d;
-                if (!InBounds(np)) continue;
-                int ni = PosToIdx(np);
-                var cand = grid[ni];
-                if (cand == null || IsGhost(cand)) continue;
-                target = cand;
-                targetIdx = ni;
-                break;
-            }
-
-            if (target == null)
-            {
-                if (ghostMerge.TryGetValue(ghost.id, out var st))
-                {
-                    st.timer = 0f;
-                    st.targetId = null;
-                }
-                continue;
-            }
-
-            if (!ghostMerge.TryGetValue(ghost.id, out var state))
-            {
-                state = new GhostMergeState();
-            }
-
-            if (state.targetId == target.id)
-            {
-                state.timer += dt;
-            }
-            else
-            {
-                state.targetId = target.id;
-                state.timer = dt;
-            }
-
-            if (state.timer >= ghostMergeSeconds)
-            {
-                foreach (var t in target.traits)
-                {
-                    ghost.AddTrait(t);
-                }
-
-                if (target.Has(TraitType.Fire))
-                {
-                    ghost.fireTimer = Mathf.Max(ghost.fireTimer, target.fireTimer);
-                }
-
-                RemoveEntity(target);
-                state.timer = 0f;
-                state.targetId = null;
-                status = "GHOST MERGE";
-            }
-
-            ghostMerge[ghost.id] = state;
-        }
-
-        // cleanup orphaned states
-        if (ghostMerge.Count > 0)
-        {
-            var dead = new List<string>();
-            foreach (var kv in ghostMerge)
-            {
-                if (!aliveGhosts.Contains(kv.Key)) dead.Add(kv.Key);
-            }
-            foreach (var id in dead) ghostMerge.Remove(id);
-        }
+        // Disabled: ghosts should not merge or consume items.
     }
 
     void UpdateTraitMerges(float dt)
@@ -1063,11 +999,11 @@ int Project(Vector2Int p, Vector2Int dir)
 
     List<TraitType> RandomRequiredTraits()
     {
-        // Only traits that an order can demand
+        // Balancing like the reference:
+        // 80% -> 1 trait, 20% -> 2 traits (clamped to available).
         var candidates = new[] { TraitType.Fire, TraitType.Ice };
-        int max = Mathf.Clamp(maxOrderTraits, 0, candidates.Length);
-        int min = Mathf.Clamp(minOrderTraits, 0, max);
-        int count = rng.Next(min, max + 1);
+        int count = (rng.NextDouble() > 0.8) ? 2 : 1;
+        count = Mathf.Clamp(count, 0, candidates.Length);
 
         var set = new HashSet<TraitType>();
         while (set.Count < count)
@@ -1089,6 +1025,23 @@ int Project(Vector2Int p, Vector2Int dir)
         var e = grid[idx];
         selector = (e != null) ? e.anchor : IdxToPos(idx);
         RenderAll();
+    }
+
+    void SpawnBlockedFeedback(Vector2Int size)
+    {
+        if (size.x * size.y <= 1) return;
+
+        ScreenShake.Shake(0.12f, 6f, 18);
+
+        if (statusText != null)
+        {
+            var baseColor = statusText.color;
+            statusText.DOKill();
+            statusText.color = baseColor;
+            statusText.DOColor(Color.red, 0.06f)
+                .SetLoops(2, LoopType.Yoyo)
+                .OnComplete(() => statusText.color = baseColor);
+        }
     }
 
     // ----------------------------

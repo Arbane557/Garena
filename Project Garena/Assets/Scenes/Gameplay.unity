@@ -1258,7 +1258,7 @@ MonoBehaviour:
   m_CellSize: {x: 32, y: 32}
   m_Spacing: {x: 5, y: 5}
   m_Constraint: 1
-  m_ConstraintCount: 6
+  m_ConstraintCount: 10
 --- !u!1 &1263279497
 GameObject:
   m_ObjectHideFlags: 0
@@ -1851,7 +1851,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cbda67962334b3b4881810cef3351548, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
-  gridSize: 6
+  gridSize: 10
   tickRateSeconds: 1.5
   deliveryZoneCount: 5
   initialTraitCount: 12
