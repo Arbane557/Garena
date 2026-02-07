@@ -1,0 +1,728 @@
+fileFormatVersion: 2
+guid: 18a9cea81563aff47aa828c8dd6a95d2
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -3047355692444821981
+    second: portaltop_0
+  - first:
+      213: 2320786751237382516
+    second: portaltop_1
+  - first:
+      213: -613348656500477510
+    second: portaltop_2
+  - first:
+      213: -3003268721710668968
+    second: portaltop_3
+  - first:
+      213: -7168686160491168906
+    second: portaltop_4
+  - first:
+      213: 8848703019004261530
+    second: portaltop_5
+  - first:
+      213: -3914227514627019367
+    second: portaltop_6
+  - first:
+      213: -1788937742671228062
+    second: portaltop_7
+  - first:
+      213: -6720802621075311607
+    second: portaltop_8
+  - first:
+      213: -7524789811471636934
+    second: portaltop_9
+  - first:
+      213: 4131119648826449534
+    second: portaltop_10
+  - first:
+      213: 6135798760409424744
+    second: portaltop_11
+  - first:
+      213: 2713083138073099719
+    second: portaltop_12
+  - first:
+      213: -6286212336048068701
+    second: portaltop_13
+  - first:
+      213: -6711036515894859776
+    second: portaltop_14
+  - first:
+      213: -311775761970074160
+    second: portaltop_15
+  - first:
+      213: -5687303705034100624
+    second: portaltop_16
+  - first:
+      213: 8651724290783524189
+    second: portaltop_17
+  - first:
+      213: 1774273260092848979
+    second: portaltop_18
+  - first:
+      213: -4063368924873724350
+    second: portaltop_19
+  - first:
+      213: -6288266597650682657
+    second: portaltop_20
+  - first:
+      213: 6029128279288883627
+    second: portaltop_21
+  - first:
+      213: 5473878382094150738
+    second: portaltop_22
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 1
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: portaltop_0
+      rect:
+        serializedVersion: 2
+        x: 45
+        y: 211
+        width: 22
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 326df8fa42e95b5d0800000000000000
+      internalID: -3047355692444821981
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: portaltop_1
+      rect:
+        serializedVersion: 2
+        x: 77
+        y: 205
+        width: 8
+        height: 20
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 471efe21147153020800000000000000
+      internalID: 2320786751237382516
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: portaltop_2
+      rect:
+        serializedVersion: 2
+        x: 81
+        y: 217
+        width: 12
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ab173d585a2fc77f0800000000000000
+      internalID: -613348656500477510
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: portaltop_3
+      rect:
+        serializedVersion: 2
+        x: 93
+        y: 199
+        width: 10
+        height: 26
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 853e465720f3256d0800000000000000
+      internalID: -3003268721710668968
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: portaltop_4
+      rect:
+        serializedVersion: 2
+        x: 103
+        y: 131
+        width: 796
+        height: 94
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 67b3aa91be5b38c90800000000000000
+      internalID: -7168686160491168906
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: portaltop_5
+      rect:
+        serializedVersion: 2
+        x: 905
+        y: 209
+        width: 8
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a94fcaa6388ecca70800000000000000
+      internalID: 8848703019004261530
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: portaltop_6
+      rect:
+        serializedVersion: 2
+        x: 59
+        y: 153
+        width: 42
+        height: 48
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 99da89c50dedda9c0800000000000000
+      internalID: -3914227514627019367
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: portaltop_7
+      rect:
+        serializedVersion: 2
+        x: 97
+        y: 171
+        width: 16
+        height: 28
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 263dacae99a6c27e0800000000000000
+      internalID: -1788937742671228062
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: portaltop_8
+      rect:
+        serializedVersion: 2
+        x: 885
+        y: 145
+        width: 44
+        height: 60
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 904ba4ddf99eab2a0800000000000000
+      internalID: -6720802621075311607
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: portaltop_9
+      rect:
+        serializedVersion: 2
+        x: 99
+        y: 153
+        width: 8
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a3621c5d883929790800000000000000
+      internalID: -7524789811471636934
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: portaltop_10
+      rect:
+        serializedVersion: 2
+        x: 329
+        y: 103
+        width: 42
+        height: 52
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e7edfe8de6fa45930800000000000000
+      internalID: 4131119648826449534
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: portaltop_11
+      rect:
+        serializedVersion: 2
+        x: 683
+        y: 109
+        width: 38
+        height: 48
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8636c77b67cb62550800000000000000
+      internalID: 6135798760409424744
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: portaltop_12
+      rect:
+        serializedVersion: 2
+        x: 921
+        y: 147
+        width: 9
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7cdf2f25dbec6a520800000000000000
+      internalID: 2713083138073099719
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: portaltop_13
+      rect:
+        serializedVersion: 2
+        x: 61
+        y: 139
+        width: 8
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3a72d27af23e2c8a0800000000000000
+      internalID: -6286212336048068701
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: portaltop_14
+      rect:
+        serializedVersion: 2
+        x: 287
+        y: 109
+        width: 12
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 008696b68db9dd2a0800000000000000
+      internalID: -6711036515894859776
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: portaltop_15
+      rect:
+        serializedVersion: 2
+        x: 719
+        y: 111
+        width: 8
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0dd623aa8995cabf0800000000000000
+      internalID: -311775761970074160
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: portaltop_16
+      rect:
+        serializedVersion: 2
+        x: 821
+        y: 117
+        width: 8
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 070fda3b963a211b0800000000000000
+      internalID: -5687303705034100624
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: portaltop_17
+      rect:
+        serializedVersion: 2
+        x: 365
+        y: 105
+        width: 8
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d5535c65769111870800000000000000
+      internalID: 8651724290783524189
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: portaltop_18
+      rect:
+        serializedVersion: 2
+        x: 681
+        y: 97
+        width: 8
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 35bfe4a212c7f9810800000000000000
+      internalID: 1774273260092848979
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: portaltop_19
+      rect:
+        serializedVersion: 2
+        x: 327
+        y: 91
+        width: 8
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 24e6a81dd730c97c0800000000000000
+      internalID: -4063368924873724350
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: portaltop_20
+      rect:
+        serializedVersion: 2
+        x: 507
+        y: 45
+        width: 42
+        height: 48
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fdca31a98d69bb8a0800000000000000
+      internalID: -6288266597650682657
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: portaltop_21
+      rect:
+        serializedVersion: 2
+        x: 505
+        y: 47
+        width: 8
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ba9a640f934cba350800000000000000
+      internalID: 6029128279288883627
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: portaltop_22
+      rect:
+        serializedVersion: 2
+        x: 543
+        y: 33
+        width: 8
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 25c696cf26f17fb40800000000000000
+      internalID: 5473878382094150738
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      portaltop_0: -3047355692444821981
+      portaltop_1: 2320786751237382516
+      portaltop_10: 4131119648826449534
+      portaltop_11: 6135798760409424744
+      portaltop_12: 2713083138073099719
+      portaltop_13: -6286212336048068701
+      portaltop_14: -6711036515894859776
+      portaltop_15: -311775761970074160
+      portaltop_16: -5687303705034100624
+      portaltop_17: 8651724290783524189
+      portaltop_18: 1774273260092848979
+      portaltop_19: -4063368924873724350
+      portaltop_2: -613348656500477510
+      portaltop_20: -6288266597650682657
+      portaltop_21: 6029128279288883627
+      portaltop_22: 5473878382094150738
+      portaltop_3: -3003268721710668968
+      portaltop_4: -7168686160491168906
+      portaltop_5: 8848703019004261530
+      portaltop_6: -3914227514627019367
+      portaltop_7: -1788937742671228062
+      portaltop_8: -6720802621075311607
+      portaltop_9: -7524789811471636934
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

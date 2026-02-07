@@ -23,12 +23,20 @@ public class CellView : MonoBehaviour
     public Sprite breadSprite;
     public Sprite knifeSprite;
     public Sprite waterBottleSprite;
-    public GameObject ghostSprite;
+    public Sprite ghostSprite;
 
     public Sprite fireSprite;
     public Sprite iceSprite;
     public Sprite sentientSprite;
     public Sprite hauntedSprite;
+
+    [Header("Frame Animations")]
+    public Sprite[] ghostFrames;
+    public float ghostFps = 10f;
+    public Sprite[] fireFrames;
+    public float fireFps = 10f;
+    public Sprite[] iceFrames;
+    public float iceFps = 10f;
 
     private Button btn;
     private RectTransform rootRect;
@@ -44,6 +52,7 @@ public class CellView : MonoBehaviour
     private bool wasSelected;
     private string lastEntityId;
     private int lastTraitCount;
+    private FrameAnimator frameAnimator;
 
     public void Init(System.Action onClick)
     {
@@ -75,6 +84,8 @@ public class CellView : MonoBehaviour
             if (c == null) c = mainIcon.gameObject.AddComponent<Canvas>();
             c.overrideSorting = true;
             c.sortingOrder = 10;
+            frameAnimator = mainIcon.GetComponent<FrameAnimator>();
+            if (frameAnimator == null) frameAnimator = mainIcon.gameObject.AddComponent<FrameAnimator>();
         }
 
         if (traitIconRow != null)
@@ -102,6 +113,8 @@ public class CellView : MonoBehaviour
 
         if (e == null)
         {
+            if (frameAnimator != null) frameAnimator.Stop();
+            mainIcon.sprite = null;
             hadEntity = false;
             lastEntityId = null;
             lastTraitCount = 0;
@@ -123,20 +136,16 @@ public class CellView : MonoBehaviour
         if (e.isTraitTile)
         {
             mainIcon.enabled = true;
-            mainIcon.sprite = TraitSprite(e.tileTrait);
             ApplySize(e.size);
             AnimateMove(cellPos, fromPos);
+            PlayTraitAnimation(e.tileTrait);
             return;
         }
 
         mainIcon.enabled = true;
-        var pickedsprite = BoxSprite(e.subType);
-        if (pickedsprite == null) { var spawnedGhost = Instantiate(ghostSprite, transform.position, Quaternion.identity);
-            spawnedGhost.transform.SetParent(transform);
-        }
-        else mainIcon.sprite = pickedsprite;
         ApplySize(e.size);
         AnimateMove(cellPos, fromPos);
+        PlayItemAnimation(e.subType);
 
         foreach (var t in e.traits)
         {
@@ -231,5 +240,34 @@ public class CellView : MonoBehaviour
             TraitType.Haunted => hauntedSprite,
             _ => null
         };
+    }
+
+    void PlayItemAnimation(ItemSubType subType)
+    {
+        if (frameAnimator == null) return;
+        if (subType == ItemSubType.Ghost && ghostFrames != null && ghostFrames.Length > 0)
+        {
+            frameAnimator.Play(ghostFrames, ghostFps);
+            return;
+        }
+        frameAnimator.Stop();
+        mainIcon.sprite = BoxSprite(subType);
+    }
+
+    void PlayTraitAnimation(TraitType t)
+    {
+        if (frameAnimator == null) return;
+        if (t == TraitType.Fire && fireFrames != null && fireFrames.Length > 0)
+        {
+            frameAnimator.Play(fireFrames, fireFps);
+            return;
+        }
+        if (t == TraitType.Ice && iceFrames != null && iceFrames.Length > 0)
+        {
+            frameAnimator.Play(iceFrames, iceFps);
+            return;
+        }
+        frameAnimator.Stop();
+        mainIcon.sprite = TraitSprite(t);
     }
 }

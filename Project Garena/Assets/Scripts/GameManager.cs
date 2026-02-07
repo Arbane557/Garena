@@ -103,6 +103,8 @@ public class GameManager : MonoBehaviour
     public int maxGhosts = 4;
     public float ghostSpawnInterval = 2.5f;
     public float ghostMergeSeconds = 2.0f;
+    public GameObject ghostStepPrefab;
+    public float ghostStepLifeSeconds = 1.5f;
 
     [Header("Trait Tiles")]
     public float traitSpawnInterval = 5.5f;
@@ -1308,8 +1310,33 @@ public class GameManager : MonoBehaviour
             }
 
             ApplySentientAuraAt(ghost.anchor);
-            if (moved) RenderAll();
+            if (moved)
+            {
+                SpawnGhostStepVfx(ghost.anchor);
+                RenderAll();
+            }
         }
+    }
+
+    void SpawnGhostStepVfx(Vector2Int pos)
+    {
+        if (ghostStepPrefab == null || cells == null) return;
+        int idx = PosToIdx(pos);
+        if (idx < 0 || idx >= cells.Length) return;
+        var cell = cells[idx];
+        if (cell == null) return;
+
+        var go = Instantiate(ghostStepPrefab, cell.transform);
+        var rt = go.GetComponent<RectTransform>();
+        if (rt != null)
+        {
+            rt.anchorMin = new Vector2(0.5f, 0.5f);
+            rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = Vector2.zero;
+            rt.localScale = Vector3.one;
+        }
+        Destroy(go, ghostStepLifeSeconds);
     }
 
     Vector2Int? GetGhostChaseDir(Vector2Int from)
@@ -2390,6 +2417,11 @@ int Project(Vector2Int p, Vector2Int dir)
     void UpdateInteractPointer()
     {
         if (interactPointer == null || cells == null) return;
+        if (!IsNecromancerCustomer())
+        {
+            if (interactPointer.activeSelf) interactPointer.SetActive(false);
+            return;
+        }
         var e = GetSelectedEntity();
         if (e == null || IsTraitTile(e) || IsGhost(e) || !IsUsable(e))
         {
@@ -2397,7 +2429,7 @@ int Project(Vector2Int p, Vector2Int dir)
             return;
         }
 
-        Vector3 pos = GetEntityWorldCenter(e);
+        Vector3 pos = GetEntityTopCellWorld(e);
         if (pos == Vector3.zero)
         {
             if (interactPointer.activeSelf) interactPointer.SetActive(false);
@@ -2432,6 +2464,21 @@ int Project(Vector2Int p, Vector2Int dir)
             count++;
         }
         return count > 0 ? sum / count : Vector3.zero;
+    }
+
+    Vector3 GetEntityTopCellWorld(BoxEntity e)
+    {
+        if (e == null || cells == null) return Vector3.zero;
+        int idx = PosToIdx(e.anchor);
+        if (idx < 0 || idx >= cells.Length) return Vector3.zero;
+        var cv = cells[idx];
+        return cv != null ? cv.transform.position : Vector3.zero;
+    }
+
+    bool IsNecromancerCustomer()
+    {
+        return !string.IsNullOrWhiteSpace(currentCustomerName) &&
+               currentCustomerName.Trim().Equals("Necromancer", System.StringComparison.OrdinalIgnoreCase);
     }
 
     void DisableCellsForEntity(BoxEntity e)
