@@ -2690,7 +2690,7 @@ MonoBehaviour:
   m_HorizontalAlignment: 8
   m_VerticalAlignment: 512
   m_textAlignment: 65535
-  m_characterSpacing: 0
+  m_characterSpacing: -8
   m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0
@@ -2719,7 +2719,7 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 40.429913, y: 100.55905, z: 64.757614, w: 17.61684}
+  m_margin: {x: 40.429913, y: 100.55905, z: 53.3016, w: 17.61684}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
@@ -3586,6 +3586,7 @@ MonoBehaviour:
   orderLifetime: 12
   minOrderTraits: 1
   maxOrderTraits: 2
+  customerLevels: []
   ordersBeforeChaos: 8
   initialItemCount: 6
   spawnInitialItems: 1
@@ -3626,6 +3627,7 @@ MonoBehaviour:
   coldRecoverRate: 8
   heatOverload: 24
   coldOverload: 20
+  fireAuraDamagePerSecond: 6
   physicsGravity: 3.5
   physicsMass: 3
   physicsImpulse: 6
@@ -3752,6 +3754,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f780d91bca1fa17418d9fc3b7410ae63, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PopUp
+  nameText: {fileID: 1376064562}
   text: {fileID: 2003255806}
   canvasGroup: {fileID: 1911440963}
   charDelay: 0.03
