@@ -99,6 +99,10 @@ public class GameManager : MonoBehaviour
     {
         "I hope this line of work is what you expected."
     };
+    [TextArea(2, 6)] public List<string> tutorialAfterIce = new List<string>
+    {
+        "Have you tried pouring water on those lava blocks?"
+    };
 
     [Header("Progression")]
     public int ordersBeforeChaos = 7;
@@ -232,6 +236,7 @@ public class GameManager : MonoBehaviour
     private Dictionary<string, float> iceAuraTime = new Dictionary<string, float>();
     private bool awaitingDialogue = false;
     private bool postOldManLoop = false;
+    private bool shownAfterIceDialogue = false;
     private float fireHurtSfxTimer = 0f;
     private float iceHurtSfxTimer = 0f;
     private bool interactTutorialUsed = false;
@@ -723,7 +728,7 @@ public class GameManager : MonoBehaviour
                 flavorLine = "I have a long road ahead. Keep it simple.",
                 orders = new List<OrderSpec>
                 {
-                    OrderSpec.Of(ItemSubType.Bread)
+                    OrderSpec.Of(ItemSubType.Knife)
                 },
                 enableChaosSpawns = false,
                 enableFireSpawns = false
@@ -788,23 +793,7 @@ public class GameManager : MonoBehaviour
                 enableIceAura = true,
                 iceToItemSeconds = 1f
             },
-            new CustomerLevel
-            {
-                id = "old_man",
-                displayName = "Old Man",
-                flavorLine = "You're still here. Then keep up.",
-                orders = new List<OrderSpec>
-                {
-                    OrderSpec.Of(ItemSubType.Knife, TraitType.Fire)
-                },
-                loopOrders = false,
-                enableChaosSpawns = false,
-                enableFireSpawns = false,
-                enableFireSpread = false,
-                enableIceSpawns = false,
-                enableIceAura = false,
-                enableGhostSpawns = false
-            }
+            // Old Man removed as a customer. Scripted line only.
         };
     }
 
@@ -841,6 +830,7 @@ public class GameManager : MonoBehaviour
         currentCustomerIndex = Mathf.Clamp(levelIndex, 0, customerLevels.Count - 1);
         currentCustomerOrderIndex = 0;
         var level = customerLevels[currentCustomerIndex];
+        Debug.Log($"[Customer] Start {level.id}");
         currentCustomerFlavor = level.flavorLine;
         currentCustomerName = level.displayName;
         interactTutorialUsed = false;
@@ -900,23 +890,39 @@ public class GameManager : MonoBehaviour
         }
 
         var level = customerLevels[currentCustomerIndex];
+        Debug.Log($"[Customer] Advance {level.id} index={currentCustomerOrderIndex}");
         currentCustomerOrderIndex++;
         if (level.orders == null || currentCustomerOrderIndex >= level.orders.Count)
         {
+            Debug.Log($"[Customer] Complete {level.id}");
             if (level.loopOrders)
             {
                 currentCustomerOrderIndex = 0;
                 GenerateNewOrder();
                 return;
             }
-            if (level.id == "old_man")
+            if (level.id == "ice_mage" && !shownAfterIceDialogue && tutorialAfterIce != null && tutorialAfterIce.Count > 0)
             {
-                postOldManLoop = true;
-                StartRandomMage();
+                Debug.Log("[Customer] Ice Mage -> Old Man scripted line");
+                shownAfterIceDialogue = true;
+                awaitingDialogue = true;
+                currentOrder = null;
+                orderSpawnTimer = 0f;
+                wantedView?.ClearWanted();
+                PopUp.SetDialogueMode(autoAdvance: true, advanceOnEnter: false);
+                PopUp.WriteSequence("Old Man", tutorialAfterIce, () =>
+                {
+                    awaitingDialogue = false;
+                    PopUp.SetDialogueMode(autoAdvance: true, advanceOnEnter: false);
+                    postOldManLoop = true;
+                    Debug.Log("[Customer] Old Man scripted done -> random");
+                    StartRandomMage();
+                });
                 return;
             }
             if (postOldManLoop && IsMageLevel(level.id))
             {
+                Debug.Log("[Customer] PostOldMan loop -> random");
                 StartRandomMage();
                 return;
             }
@@ -928,6 +934,7 @@ public class GameManager : MonoBehaviour
                     awaitingDialogue = true;
                     currentOrder = null;
                     orderSpawnTimer = 0f;
+                    wantedView?.ClearWanted();
                     PopUp.SetDialogueMode(autoAdvance: true, advanceOnEnter: false);
                     PopUp.WriteSequence(tutorialSpeakerName, tutorialAfterBaker, () =>
                     {
