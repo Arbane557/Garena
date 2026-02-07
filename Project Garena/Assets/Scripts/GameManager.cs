@@ -306,6 +306,7 @@ public class GameManager : MonoBehaviour
         // Keep selector following the moved box (anchor position)
         selector = box.anchor;
         status = box.Has(TraitType.Ice) ? "SLID" : "MOVED";
+        PlaySfx("click");
         RenderAll();
         UpdateAnchorCache();
     }
@@ -331,6 +332,7 @@ public class GameManager : MonoBehaviour
         PlaceEntity(en, anchor);
 
         status = "SPAWNED";
+        PlaySfx("place");
         // Update just the spawned cell immediately, then refresh HUD
         if (cells != null && idx >= 0 && idx < cells.Length)
         {
@@ -365,6 +367,7 @@ public class GameManager : MonoBehaviour
         e.anchor = anchor;
         PlaceEntity(e, anchor);
         status = "AUTO SPAWN";
+        PlaySfx("place");
         RenderAll();
     }
 
