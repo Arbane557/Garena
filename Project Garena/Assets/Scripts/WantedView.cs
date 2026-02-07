@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
 using System.Linq;
+using DG.Tweening;
 
 public class WantedView : MonoBehaviour
 {
@@ -19,6 +20,16 @@ public class WantedView : MonoBehaviour
     public TMP_Text labelText;   // e.g. "ICE KNIFE"
     public TMP_Text timerText;   // e.g. "9s"
     public TMP_Text narrativeText; // short flavor line
+
+    [Header("Order Tween")]
+    public Transform itemTweenRoot;
+    public GameObject submitEffectPrefab;
+    public Transform effectParent;
+    public float submitTweenUp = 24f;
+    public float submitTweenDuration = 0.2f;
+    public float submitPunchScale = 0.2f;
+    public float failShakeStrength = 10f;
+    public float failShakeDuration = 0.25f;
 
     [Header("Sprites")]
     public Sprite breadSprite, knifeSprite, waterSprite;
@@ -41,6 +52,7 @@ public class WantedView : MonoBehaviour
             baseItemSize = rt.sizeDelta;
             baseItemRot = rt.localRotation;
         }
+        if (itemTweenRoot == null && itemIcon != null) itemTweenRoot = itemIcon.transform;
     }
 
     public void SetWanted(ItemSubType subType, TraitType requiredTrait, float timeLeft, float timeTotal)
@@ -173,5 +185,33 @@ public class WantedView : MonoBehaviour
             rt.sizeDelta = baseItemSize;
             rt.localRotation = baseItemRot;
         }
+    }
+
+    public void PlayOrderCompleteTween()
+    {
+        if (itemTweenRoot == null) return;
+        var rt = itemTweenRoot as RectTransform;
+        itemTweenRoot.DOKill();
+        var startPos = itemTweenRoot.localPosition;
+
+        itemTweenRoot.DOPunchScale(Vector3.one * submitPunchScale, submitTweenDuration, 8, 0.7f);
+        itemTweenRoot.DOLocalMoveY(startPos.y + submitTweenUp, submitTweenDuration).SetEase(Ease.OutQuad)
+            .OnComplete(() => itemTweenRoot.localPosition = startPos);
+
+        if (submitEffectPrefab != null)
+        {
+            var parent = effectParent != null ? effectParent : itemTweenRoot;
+            var fx = Object.Instantiate(submitEffectPrefab, parent);
+            var fxRt = fx.transform as RectTransform;
+            if (fxRt != null) fxRt.anchoredPosition = Vector2.zero;
+            Object.Destroy(fx, 1.5f);
+        }
+    }
+
+    public void PlayOrderFailedTween()
+    {
+        if (itemTweenRoot == null) return;
+        itemTweenRoot.DOKill();
+        itemTweenRoot.DOShakePosition(failShakeDuration, new Vector3(failShakeStrength, failShakeStrength, 0f), 18, 90f, false, true);
     }
 }

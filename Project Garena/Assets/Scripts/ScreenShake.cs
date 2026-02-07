@@ -1,12 +1,15 @@
 using UnityEngine;
 using DG.Tweening;
 using System.Linq;
+using MoreMountains.Feedbacks;
 
 public class ScreenShake : MonoBehaviour
 {
     private static ScreenShake instance;
     private Transform cam;
     private Vector3 basePos;
+    public MMF_Player feedbackPlayer;
+    private Transform uiTarget;
 
     void Awake()
     {
@@ -37,10 +40,11 @@ public class ScreenShake : MonoBehaviour
             if (cam == null)
             {
                 var canvas = FindObjectOfType<Canvas>();
-                cam = canvas != null ? canvas.transform : null;
+                uiTarget = canvas != null ? canvas.transform : null;
             }
         }
         if (cam != null) basePos = cam.localPosition;
+        else if (uiTarget != null) basePos = uiTarget.localPosition;
     }
 
     public static void Shake(float duration = 0.12f, float strength = 6f, int vibrato = 18)
@@ -50,17 +54,24 @@ public class ScreenShake : MonoBehaviour
             var go = new GameObject("ScreenShake");
             instance = go.AddComponent<ScreenShake>();
         }
+        if (instance.feedbackPlayer != null)
+        {
+            instance.feedbackPlayer.PlayFeedbacks();
+            return;
+        }
         instance.DoShake(duration, strength, vibrato);
     }
 
     void DoShake(float duration, float strength, int vibrato)
     {
         CacheCamera();
-        if (cam == null) return;
+        if (cam == null && uiTarget == null) return;
 
-        cam.DOKill();
-        cam.localPosition = basePos;
-        cam.DOShakePosition(duration, strength, vibrato, 90f, false, true)
-            .OnComplete(() => cam.localPosition = basePos);
+        var target = cam != null ? cam : uiTarget;
+        target.DOKill();
+        target.localPosition = basePos;
+        target.DOShakePosition(duration, strength, vibrato, 90f, false, true)
+            .SetUpdate(true)
+            .OnComplete(() => target.localPosition = basePos);
     }
 }

@@ -42,6 +42,7 @@ public class GameManager : MonoBehaviour
     public RectTransform peakBarParent;
     public RectTransform peakBarRoot;
     public GameObject interactPointer;
+    public GameObject interactTutorial;
     [Header("Portals")]
     public GameObject portal1;
     public GameObject portal2;
@@ -58,6 +59,9 @@ public class GameManager : MonoBehaviour
     public float slashLifeSeconds = 5f;
     public float slashSpinSeconds = 0.22f;
     public float slashSpinDegrees = 540f;
+    [Header("Submit FX")]
+    public GameObject submitEffectPrefab;
+    public float submitEffectLifeSeconds = 1.5f;
 
     [Header("Game Rules")]
     public int reputation = 50;
@@ -79,6 +83,7 @@ public class GameManager : MonoBehaviour
     [Header("Order Traits")]
     [Range(0, 3)] public int minOrderTraits = 1;
     [Range(0, 3)] public int maxOrderTraits = 2;
+    [Range(0f, 1f)] public float dualFireIceChance = 0.2f;
 
     [Header("Customers")]
     public List<CustomerLevel> customerLevels = new List<CustomerLevel>();
@@ -229,6 +234,7 @@ public class GameManager : MonoBehaviour
     private bool postOldManLoop = false;
     private float fireHurtSfxTimer = 0f;
     private float iceHurtSfxTimer = 0f;
+    private bool interactTutorialUsed = false;
     private float prevHpLock = 0f;
     private float prevHeat = 0f;
     private float prevCold = 0f;
@@ -485,6 +491,14 @@ public class GameManager : MonoBehaviour
 
         if (!frozen && kb.eKey.wasPressedThisFrame) UseSelected();
         else if (frozen && kb.eKey.wasPressedThisFrame) ConsumeFrozenAttempt();
+        if (kb.eKey.wasPressedThisFrame)
+        {
+            if (!interactTutorialUsed)
+            {
+                interactTutorialUsed = true;
+                if (interactTutorial != null) interactTutorial.SetActive(false);
+            }
+        }
 
         if (kb.jKey.wasPressedThisFrame)
         {
@@ -664,6 +678,8 @@ public class GameManager : MonoBehaviour
         {
             L_hp = Mathf.Min(L_hp_cap, L_hp + orderExpireHpDamage);
             status = "ORDER EXPIRED";
+            wantedView?.PlayOrderFailedTween();
+            ScreenShake.Shake();
             GenerateNewOrder();
         }
     }
@@ -827,6 +843,8 @@ public class GameManager : MonoBehaviour
         var level = customerLevels[currentCustomerIndex];
         currentCustomerFlavor = level.flavorLine;
         currentCustomerName = level.displayName;
+        interactTutorialUsed = false;
+        UpdateInteractTutorial();
         UpdatePortalsForLevel(level);
 
         chaosUnlocked = level.enableChaosSpawns;
@@ -1388,6 +1406,8 @@ public class GameManager : MonoBehaviour
             L_hp = Mathf.Max(0f, L_hp - healGood);
             status = "ORDER FULFILLED";
             PlaySfx("submitsuccess");
+            wantedView?.PlayOrderCompleteTween();
+            ScreenShake.Shake();
         }
         else
         {
@@ -1395,11 +1415,14 @@ public class GameManager : MonoBehaviour
             L_hp = Mathf.Min(L_hp_cap, L_hp + dmgWrong);
             status = $"WRONG: need {currentOrder.subType}({TraitsToStr(currentOrder.requiredTraits)}) got {box.subType}({TraitsToStr(box.traits)})";
             PlaySfx("submitwrong");
+            wantedView?.PlayOrderFailedTween();
+            ScreenShake.Shake();
             if (reputation <= minReputation) { GameOver(); return; }
         }
 
         bool wasHaunted = box.Has(TraitType.Haunted);
         var spawnPos = box.anchor;
+        PlaySubmitCellFx(box);
         RemoveEntity(box);
         if (wasHaunted)
         {
@@ -1419,6 +1442,7 @@ public class GameManager : MonoBehaviour
         L_hp = Mathf.Max(0f, L_hp - healGood);
         status = "AUTO CORRECT";
         PlaySfx("submitsuccess");
+        ScreenShake.Shake();
 
         ordersCompleted++;
         if (!chaosUnlocked && ordersCompleted >= ordersBeforeChaos)
@@ -1428,6 +1452,7 @@ public class GameManager : MonoBehaviour
 
         bool wasHaunted = box.Has(TraitType.Haunted);
         var spawnPos = box.anchor;
+        PlaySubmitCellFx(box);
         RemoveEntity(box);
         if (wasHaunted) SpawnGhostAt(spawnPos);
         GenerateNewOrder();
@@ -1448,6 +1473,16 @@ public class GameManager : MonoBehaviour
         // Disabled: no game over state.
         status = "GAME OVER (DISABLED)";
         RenderHud();
+    }
+
+    void PlaySubmitCellFx(BoxEntity box)
+    {
+        if (cells == null || box == null) return;
+        int idx = PosToIdx(box.anchor);
+        if (idx < 0 || idx >= cells.Length) return;
+        var cv = cells[idx];
+        if (cv == null) return;
+        cv.PlaySubmitTween(submitEffectPrefab, submitEffectLifeSeconds);
     }
 
     // ----------------------------
@@ -2076,11 +2111,12 @@ public class GameManager : MonoBehaviour
     void FlashUI(GameObject go)
     {
         if (go == null) return;
+        if (!go.activeSelf) go.SetActive(true);
         var cg = go.GetComponent<CanvasGroup>();
         if (cg == null) cg = go.AddComponent<CanvasGroup>();
         cg.DOKill();
         cg.alpha = 1f;
-        cg.DOFade(0f, flashDuration).SetEase(Ease.OutQuad);
+        cg.DOFade(0f, flashDuration).SetEase(Ease.OutQuad).SetUpdate(true);
     }
 
     float Smoothstep(float a, float b, float x)
@@ -2324,18 +2360,16 @@ int Project(Vector2Int p, Vector2Int dir)
 
     List<TraitType> RandomRequiredTraits()
     {
-        // Balancing like the reference:
-        // 80% -> 1 trait, 20% -> 2 traits (clamped to available).
         var candidates = new[] { TraitType.Fire, TraitType.Ice };
-        int count = (rng.NextDouble() > 0.8) ? 2 : 1;
-        count = Mathf.Clamp(count, 0, candidates.Length);
-
-        var set = new HashSet<TraitType>();
-        while (set.Count < count)
+        if (rng.NextDouble() < dualFireIceChance)
         {
-            set.Add(candidates[rng.Next(0, candidates.Length)]);
+            return new List<TraitType> { TraitType.Fire, TraitType.Ice };
         }
 
+        int count = (rng.NextDouble() > 0.8) ? 2 : 1;
+        count = Mathf.Clamp(count, 0, candidates.Length);
+        var set = new HashSet<TraitType>();
+        while (set.Count < count) set.Add(candidates[rng.Next(0, candidates.Length)]);
         return set.ToList();
     }
 
@@ -2656,6 +2690,7 @@ int Project(Vector2Int p, Vector2Int dir)
         RenderHud();
         UpdateAnchorCache();
         UpdateInteractPointer();
+        UpdateInteractTutorial();
     }
 
     void RenderHud()
@@ -2677,7 +2712,7 @@ int Project(Vector2Int p, Vector2Int dir)
         }
         if (reputationText != null)
         {
-            reputationText.text = $"REP: {reputation}";
+            reputationText.text = $"{reputation}";
             if (lastRep != reputation)
             {
                 var rt = reputationText.rectTransform;
@@ -2689,7 +2724,7 @@ int Project(Vector2Int p, Vector2Int dir)
 
         if (currentOrder != null)
         {
-            if (orderTimerText != null) orderTimerText.text = $"TIME: {Mathf.CeilToInt(currentOrder.timeLeft)}";
+            if (orderTimerText != null) orderTimerText.text = $"{Mathf.CeilToInt(currentOrder.timeLeft)}";
             wantedView?.SetWanted(currentOrder.subType, currentOrder.requiredTraits, currentOrder.timeLeft, orderLifetime, currentCustomerName, currentCustomerFlavor);
         }
 
@@ -2699,6 +2734,7 @@ int Project(Vector2Int p, Vector2Int dir)
         lastRep = reputation;
         UpdateEnergyUI();
         UpdateInteractPointer();
+        UpdateInteractTutorial();
     }
 
     void UpdateInteractPointer()
@@ -2766,6 +2802,14 @@ int Project(Vector2Int p, Vector2Int dir)
     {
         return !string.IsNullOrWhiteSpace(currentCustomerName) &&
                currentCustomerName.Trim().Equals("Necromancer", System.StringComparison.OrdinalIgnoreCase);
+    }
+
+    void UpdateInteractTutorial()
+    {
+        if (interactTutorial == null) return;
+        bool shouldShow = IsNecromancerCustomer() && !interactTutorialUsed;
+        if (interactTutorial.activeSelf != shouldShow)
+            interactTutorial.SetActive(shouldShow);
     }
 
     void DisableCellsForEntity(BoxEntity e)

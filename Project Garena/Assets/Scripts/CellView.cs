@@ -53,6 +53,10 @@ public class CellView : MonoBehaviour
     public float popDuration = 0.18f;
     public float selectPulseScale = 0.06f;
     public float selectPulseDuration = 0.12f;
+    [Header("Submit Tween")]
+    public float submitTweenUp = 24f;
+    public float submitTweenDuration = 0.2f;
+    public float submitPunchScale = 0.2f;
 
     private bool hadEntity;
     private bool wasSelected;
@@ -246,6 +250,25 @@ public class CellView : MonoBehaviour
             TraitType.Haunted => traitHauntedSprite != null ? traitHauntedSprite : hauntedSprite,
             _ => null
         };
+    }
+
+    public void PlaySubmitTween(GameObject effectPrefab, float effectLifeSeconds)
+    {
+        if (mainIcon == null) return;
+        var rt = mainIcon.rectTransform;
+        rt.DOKill();
+        var startPos = rt.anchoredPosition;
+        rt.DOPunchScale(Vector3.one * submitPunchScale, submitTweenDuration, 8, 0.7f);
+        rt.DOLocalMoveY(startPos.y + submitTweenUp, submitTweenDuration).SetEase(Ease.OutQuad)
+            .OnComplete(() => rt.anchoredPosition = startPos);
+
+        if (effectPrefab != null)
+        {
+            var fx = Object.Instantiate(effectPrefab, transform);
+            var fxRt = fx.transform as RectTransform;
+            if (fxRt != null) fxRt.anchoredPosition = Vector2.zero;
+            Object.Destroy(fx, Mathf.Max(0.1f, effectLifeSeconds));
+        }
     }
 
     void PlayItemAnimation(ItemSubType subType)
