@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using TMPro;
 using System;
 using UnityEngine.InputSystem;
+using Template.Core;
 
 public class PopUp : MonoBehaviour
 {
@@ -16,6 +17,8 @@ public class PopUp : MonoBehaviour
     public float minHoldSeconds = 0.25f;
     public bool autoAdvanceDialogue = true;
     public bool advanceOnEnter = false;
+    public string talkSfxId = "Talk";
+    public int talkEveryNChars = 2;
 
     private static PopUp instance;
     private readonly Queue<string> queue = new Queue<string>();
@@ -150,14 +153,14 @@ public class PopUp : MonoBehaviour
     {
         // Wait for key release to avoid immediately skipping due to held Enter.
         var kb = Keyboard.current;
-        while (kb != null && (kb.enterKey.isPressed || kb.numpadEnterKey.isPressed))
+        while (kb != null && kb.spaceKey.isPressed)
         {
             yield return null;
         }
         while (true)
         {
             kb = Keyboard.current;
-            if (kb != null && (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame))
+            if (kb != null && kb.spaceKey.wasPressedThisFrame)
             {
                 break;
             }
@@ -171,7 +174,7 @@ public class PopUp : MonoBehaviour
         while (timer < hold)
         {
             var kb = Keyboard.current;
-            if (kb != null && (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame))
+            if (kb != null && kb.spaceKey.wasPressedThisFrame)
             {
                 yield break; // skip hold and advance immediately
             }
@@ -188,9 +191,19 @@ public class PopUp : MonoBehaviour
         canvasGroup.alpha = 1f;
         text.text = "";
 
+        int nonSpaceCount = 0;
         for (int i = 0; i < msg.Length; i++)
         {
             text.text += msg[i];
+            if (!char.IsWhiteSpace(msg[i]))
+            {
+                nonSpaceCount++;
+                int n = Mathf.Max(1, talkEveryNChars);
+                if (nonSpaceCount % n == 0)
+                {
+                    ServiceHub.Get<Template.Audio.AudioManager>()?.PlaySfx(talkSfxId);
+                }
+            }
             yield return new WaitForSeconds(charDelay);
         }
 

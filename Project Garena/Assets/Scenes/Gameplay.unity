@@ -4085,8 +4085,11 @@ MonoBehaviour:
   nameText: {fileID: 1376064562}
   text: {fileID: 2003255806}
   canvasGroup: {fileID: 1911440963}
-  charDelay: 0.03
+  charDelay: 0.04
   holdSeconds: 1.5
+  minHoldSeconds: 0.25
+  autoAdvanceDialogue: 1
+  advanceOnEnter: 0
 --- !u!225 &1911440963
 CanvasGroup:
   m_ObjectHideFlags: 0
