@@ -30,6 +30,8 @@ public class GameManager : MonoBehaviour
     public Image weightLockFill;
     public Image heatLockFill;
     public Image coldLockFill;
+    public float peakBarWidth = 420f;
+    public float peakBarHeight = 18f;
 
     public WantedView wantedView;
     public BufferView bufferView;
@@ -1596,14 +1598,36 @@ int Project(Vector2Int p, Vector2Int dir)
     void UpdateEnergyUI()
     {
         float L_total = Mathf.Clamp(L_hp + L_weight + L_heat + L_cold, 0f, E_max_base);
-        float E_max_eff = Mathf.Max(0f, E_max_base - L_total);
-        E = Mathf.Clamp(E, 0f, E_max_eff);
+        float green = Mathf.Max(0f, E_max_base - L_total);
 
-        if (energyFill != null) energyFill.fillAmount = (E_max_base <= 0f) ? 0f : (E / E_max_base);
-        if (hpLockFill != null) hpLockFill.fillAmount = (E_max_base <= 0f) ? 0f : (L_hp / E_max_base);
-        if (weightLockFill != null) weightLockFill.fillAmount = (E_max_base <= 0f) ? 0f : (L_weight / E_max_base);
-        if (heatLockFill != null) heatLockFill.fillAmount = (E_max_base <= 0f) ? 0f : (L_heat / E_max_base);
-        if (coldLockFill != null) coldLockFill.fillAmount = (E_max_base <= 0f) ? 0f : (L_cold / E_max_base);
+        SetSegmentWidth(energyFill, green);
+        SetSegmentWidth(heatLockFill, L_heat);
+        SetSegmentWidth(coldLockFill, L_cold);
+        SetSegmentWidth(hpLockFill, L_hp);
+        SetSegmentWidth(weightLockFill, L_weight);
+
+        if (L_total >= E_max_base)
+        {
+            status = "CAPACITY COLLAPSE";
+            GameOver();
+        }
+    }
+
+    void SetSegmentWidth(Image img, float value)
+    {
+        if (img == null) return;
+        float pct = (E_max_base <= 0f) ? 0f : Mathf.Clamp01(value / E_max_base);
+        var le = img.GetComponent<LayoutElement>();
+        if (le != null)
+        {
+            le.preferredWidth = peakBarWidth * pct;
+            le.minWidth = 0f;
+        }
+        var rt = img.rectTransform;
+        if (rt != null)
+        {
+            rt.sizeDelta = new Vector2(peakBarWidth * pct, peakBarHeight);
+        }
     }
 
     void BuildPeakBarIfMissing()
@@ -1621,16 +1645,25 @@ int Project(Vector2Int p, Vector2Int dir)
         rt.anchorMax = new Vector2(0.5f, 1f);
         rt.pivot = new Vector2(0.5f, 1f);
         rt.anchoredPosition = new Vector2(0f, -20f);
-        rt.sizeDelta = new Vector2(420f, 18f);
+        rt.sizeDelta = new Vector2(peakBarWidth, peakBarHeight);
 
         var bg = root.AddComponent<Image>();
         bg.color = new Color(0.08f, 0.08f, 0.12f, 0.9f);
 
-        energyFill = CreateFill(root.transform, "EnergyFill", new Color(0.95f, 0.25f, 0.25f, 1f), 0);
-        hpLockFill = CreateFill(root.transform, "HpLock", new Color(0.2f, 0.2f, 0.2f, 0.9f), 1);
-        weightLockFill = CreateFill(root.transform, "WeightLock", new Color(0.2f, 0.35f, 0.6f, 0.9f), 2);
-        heatLockFill = CreateFill(root.transform, "HeatLock", new Color(0.9f, 0.4f, 0.1f, 0.9f), 3);
-        coldLockFill = CreateFill(root.transform, "ColdLock", new Color(0.2f, 0.8f, 0.9f, 0.9f), 4);
+        var layout = root.AddComponent<HorizontalLayoutGroup>();
+        layout.spacing = 0f;
+        layout.childAlignment = TextAnchor.MiddleLeft;
+        layout.childControlWidth = false;
+        layout.childControlHeight = false;
+        layout.childForceExpandWidth = false;
+        layout.childForceExpandHeight = false;
+
+        // Order: green, hot, freeze, hp, weight
+        energyFill = CreateFill(root.transform, "EnergyFill", new Color(0.2f, 0.85f, 0.35f, 1f), 0);
+        heatLockFill = CreateFill(root.transform, "HeatLock", new Color(0.95f, 0.25f, 0.25f, 1f), 1);
+        coldLockFill = CreateFill(root.transform, "ColdLock", new Color(0.2f, 0.6f, 1f, 1f), 2);
+        hpLockFill = CreateFill(root.transform, "HpLock", new Color(1f, 0.6f, 0.2f, 1f), 3);
+        weightLockFill = CreateFill(root.transform, "WeightLock", new Color(0.5f, 0.5f, 0.5f, 1f), 4);
     }
 
     Image CreateFill(Transform parent, string name, Color color, int order)
@@ -1639,17 +1672,16 @@ int Project(Vector2Int p, Vector2Int dir)
         go.transform.SetParent(parent, false);
         var img = go.AddComponent<Image>();
         img.color = color;
-        img.type = Image.Type.Filled;
-        img.fillMethod = Image.FillMethod.Horizontal;
-        img.fillOrigin = (int)Image.OriginHorizontal.Left;
-        img.fillAmount = 1f;
         img.raycastTarget = false;
 
         var rt = img.rectTransform;
         rt.anchorMin = new Vector2(0f, 0f);
-        rt.anchorMax = new Vector2(1f, 1f);
-        rt.offsetMin = Vector2.zero;
-        rt.offsetMax = Vector2.zero;
+        rt.anchorMax = new Vector2(0f, 1f);
+        rt.sizeDelta = new Vector2(peakBarWidth, peakBarHeight);
+
+        var le = img.gameObject.AddComponent<LayoutElement>();
+        le.preferredWidth = peakBarWidth;
+        le.preferredHeight = peakBarHeight;
 
         var canvas = img.gameObject.AddComponent<Canvas>();
         canvas.overrideSorting = true;
