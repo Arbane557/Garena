@@ -197,6 +197,8 @@ public class GameManager : MonoBehaviour
 
     [Header("Use VFX")]
     public Color waterSplashColor = new Color(0.2f, 0.55f, 1f, 1f);
+    public Color fireSplashColor = new Color(1f, 0.25f, 0.2f, 1f);
+    public Color iceSplashColor = new Color(0.2f, 0.6f, 1f, 1f);
     public float waterSplashInSeconds = 0.06f;
     public float waterSplashHoldSeconds = 0.12f;
     public float waterSplashOutSeconds = 0.22f;
@@ -207,9 +209,13 @@ public class GameManager : MonoBehaviour
     public int waterSplashExtraUp = 1;
     public int waterSplashExtraDown = 1;
     public Color swordFlashColor = Color.white;
+    public Color fireSwordFlashColor = new Color(1f, 0.25f, 0.2f, 1f);
+    public Color iceSwordFlashColor = new Color(0.6f, 0.85f, 1f, 1f);
     public float swordFlashOnSeconds = 0.08f;
     public float swordFlashOffSeconds = 0.08f;
     public float swordFlashOnSeconds2 = 0.06f;
+    public float fireBreadDamage = 10f;
+    public float iceBreadDamage = 10f;
 
     [Header("Fire Spread (Global)")]
     public float globalFireSpreadInterval = 14f;
@@ -1283,7 +1289,7 @@ public class GameManager : MonoBehaviour
         return list;
     }
 
-    void PlayWaterSplash(Vector2Int center)
+    void PlayWaterSplash(Vector2Int center, Color color)
     {
         if (cells == null) return;
         var positions = new HashSet<Vector2Int>();
@@ -1307,19 +1313,63 @@ public class GameManager : MonoBehaviour
             int idx = PosToIdx(p);
             if (idx < 0 || idx >= cells.Length) continue;
             float delay = (float)(rng.NextDouble() * waterSplashMaxDelay);
-            cells[idx]?.PlaySplash(waterSplashColor, waterSplashInSeconds, waterSplashHoldSeconds, waterSplashOutSeconds, delay);
+            cells[idx]?.PlaySplash(color, waterSplashInSeconds, waterSplashHoldSeconds, waterSplashOutSeconds, delay);
         }
     }
 
-    void PlaySwordFlash(Vector2Int center)
+    void PlaySwordFlash(Vector2Int center, Color color)
     {
         if (cells == null) return;
         foreach (var p in GetPositionsInRect(center, left: 1, right: 2, up: 1, down: 1))
         {
             int idx = PosToIdx(p);
             if (idx < 0 || idx >= cells.Length) continue;
-            cells[idx]?.PlayFlash(swordFlashColor, swordFlashOnSeconds, swordFlashOffSeconds, swordFlashOnSeconds2);
+            cells[idx]?.PlayFlash(color, swordFlashOnSeconds, swordFlashOffSeconds, swordFlashOnSeconds2);
         }
+    }
+
+    void ApplyPotionTraitBurst(Vector2Int center, TraitType trait)
+    {
+        var positions = GetPositionsInRect(center, left: 2, right: 2, up: 2, down: 3);
+        foreach (var p in positions)
+        {
+            int idx = PosToIdx(p);
+            if (idx < 0 || idx >= grid.Length) continue;
+            var e = grid[idx];
+            if (e == null)
+            {
+                var tile = BoxEntity.CreateTraitTile(trait);
+                tile.size = Vector2Int.one;
+                PlaceEntity(tile, p);
+                continue;
+            }
+
+            if (IsGhost(e))
+            {
+                RemoveEntity(e);
+                var tile = BoxEntity.CreateTraitTile(trait);
+                tile.size = Vector2Int.one;
+                PlaceEntity(tile, p);
+                continue;
+            }
+
+            if (IsTraitTile(e))
+            {
+                if (e.tileTrait != trait)
+                {
+                    RemoveEntity(e);
+                    var tile = BoxEntity.CreateTraitTile(trait);
+                    tile.size = Vector2Int.one;
+                    PlaceEntity(tile, p);
+                }
+                continue;
+            }
+
+            e.AddTrait(trait);
+        }
+
+        var splashColor = (trait == TraitType.Fire) ? fireSplashColor : iceSplashColor;
+        PlayWaterSplash(center, splashColor);
     }
 
     void PlayGhostSpawnAura(Vector2Int center)
@@ -1627,7 +1677,7 @@ public class GameManager : MonoBehaviour
         foreach (var box in EnumerateEntities())
         {
             if (box == null) continue;
-            if (box.traits.Contains(TraitType.Fire))
+            if (box.traits != null && box.traits.Contains(TraitType.Fire))
             {
                 box.fireTimer -= dt;
                 if (box.fireTimer <= 0f)
@@ -2698,7 +2748,9 @@ int Project(Vector2Int p, Vector2Int dir)
     {
         var center = sword.anchor;
         PlaySfx("sword slash");
-        PlaySwordFlash(center);
+        var flashColor = sword.Has(TraitType.Fire) ? fireSwordFlashColor :
+                         sword.Has(TraitType.Ice) ? iceSwordFlashColor : swordFlashColor;
+        PlaySwordFlash(center, flashColor);
         SpawnSlashVfx(center);
         StartCoroutine(DoSwordEffect(sword));
     }
@@ -2736,6 +2788,11 @@ int Project(Vector2Int p, Vector2Int dir)
             {
                 if (hasFire && t.tileTrait == TraitType.Fire) RemoveEntity(t);
                 else if (t.tileTrait == TraitType.Ice) RemoveEntity(t);
+            }
+            else
+            {
+                if (hasFire) t.AddTrait(TraitType.Fire);
+                if (hasIce) t.AddTrait(TraitType.Ice);
             }
         }
 
@@ -2803,15 +2860,13 @@ int Project(Vector2Int p, Vector2Int dir)
             ExtinguishFireInRect(potion.anchor, left: 2, right: 2, up: 2, down: 3);
             status = "SPLASH";
             PlaySfx("bottle break");
-            PlayWaterSplash(potion.anchor);
+            PlayWaterSplash(potion.anchor, waterSplashColor);
             RemoveEntity(potion);
             RenderAll();
             return;
         }
 
-        float dur = 6f;
-        if (hasFire) fireImmuneTimer = Mathf.Max(fireImmuneTimer, dur);
-        if (hasIce) iceImmuneTimer = Mathf.Max(iceImmuneTimer, dur);
+        ApplyPotionTraitBurst(potion.anchor, hasFire ? TraitType.Fire : TraitType.Ice);
 
         PlaySfx("bottle break");
         RemoveEntity(potion);
@@ -2825,6 +2880,8 @@ int Project(Vector2Int p, Vector2Int dir)
         L_hp = Mathf.Max(0f, L_hp - 15f);
         E = Mathf.Min(E_max_base, E + 10f);
         status = "HEALED";
+        if (bread.Has(TraitType.Fire)) L_hp = Mathf.Min(L_hp_cap, L_hp + fireBreadDamage);
+        if (bread.Has(TraitType.Ice)) L_hp = Mathf.Min(L_hp_cap, L_hp + iceBreadDamage);
 
         PlaySfx("eat");
         RemoveEntity(bread);

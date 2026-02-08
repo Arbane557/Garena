@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 97860b10c62316247a827b280ccdba83
+guid: 291f35837ad89934796a828d855638b3
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -4412621582066746438
-    second: necromancer_0
+      213: 4537708329020246545
+    second: tutorialmenu_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: necromancer_0
+      name: tutorialmenu_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 32
-        height: 32
+        width: 288
+        height: 384
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: abb70b8dc0833c2c0800000000000000
-      internalID: -4412621582066746438
+      spriteID: 11a4595fead29fe30800000000000000
+      internalID: 4537708329020246545
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      necromancer_0: -4412621582066746438
+      tutorialmenu_0: 4537708329020246545
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
