@@ -295,13 +295,17 @@ public class CellView : MonoBehaviour
         Vector2 deltaCells = new Vector2(fromPos.x - cellPos.x, fromPos.y - cellPos.y);
         Vector2 startOffset = baseOffset + new Vector2(deltaCells.x * step.x, -deltaCells.y * step.y);
 
-        rt.anchoredPosition = startOffset;
-
         float dist = Mathf.Abs(deltaCells.x) + Mathf.Abs(deltaCells.y);
-        float dur = Mathf.Max(0.01f, moveTweenSeconds * Mathf.Max(1f, dist));
-        rt.DOAnchorPos(baseOffset, dur).SetEase(moveEase);
+        if (dist <= 1f)
+        {
+            rt.anchoredPosition = baseOffset;
+            return;
+        }
 
-        if (dist > 1f) ActivateSlideTrail(dur);
+        rt.anchoredPosition = startOffset;
+        float dur = Mathf.Max(0.01f, moveTweenSeconds * dist);
+        rt.DOAnchorPos(baseOffset, dur).SetEase(moveEase);
+        ActivateSlideTrail(dur);
     }
 
     void ActivateSlideTrail(float duration)

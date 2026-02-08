@@ -11,6 +11,7 @@ public class PopUp : MonoBehaviour
 {
     public TMP_Text nameText;
     public TMP_Text text;
+    public Image portraitImage;
     public CanvasGroup canvasGroup;
     public float charDelay = 0.03f;
     public float holdSeconds = 3f;
@@ -77,6 +78,15 @@ public class PopUp : MonoBehaviour
         if (instance == null) return;
         instance.autoAdvanceDialogue = autoAdvance;
         instance.advanceOnEnter = advanceOnEnter;
+    }
+
+    public static void SetPortrait(Sprite portrait)
+    {
+        if (instance == null) return;
+        instance.EnsureUI();
+        if (instance.portraitImage == null) return;
+        instance.portraitImage.sprite = portrait;
+        instance.portraitImage.enabled = portrait != null;
     }
 
     private void ShowOnce(string message)
