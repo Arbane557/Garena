@@ -58,6 +58,10 @@ public class GameManager : MonoBehaviour
     public GameObject loseGameObject;
     public GameObject loseScreenRoot;
     [Range(0f, 1f)] public float staminaLoseThresholdPct = 0.01f;
+    [Header("Submit Reactions")]
+    public GameObject happyReaction;
+    public GameObject sadReaction;
+    public float reactionSeconds = 2f;
     public float loseCountDuration = 1.0f;
     public float losePunchScale = 0.15f;
     [TextArea(2, 6)] public List<string> deathLines = new List<string>
@@ -125,6 +129,8 @@ public class GameManager : MonoBehaviour
     {
         "Press E to use the item you’re holding."
     };
+
+    public List<GameObject> tutorialBeforeFirstObjects = new List<GameObject>();
 
     [Header("Progression")]
     public int ordersBeforeChaos = 7;
@@ -290,6 +296,8 @@ public class GameManager : MonoBehaviour
     private bool shownFireMageUseTutorial = false;
     private float fireHurtSfxTimer = 0f;
     private float iceHurtSfxTimer = 0f;
+    private bool inFirstTutorial = false;
+    private bool tutorialSpawnUnlocked = false;
     private bool interactTutorialUsed = false;
     private float prevHpLock = 0f;
     private float prevHeat = 0f;
@@ -303,6 +311,7 @@ public class GameManager : MonoBehaviour
     private int score = 0;
     private int servedCustomers = 0;
     private HashSet<string> servedCustomerIds = new HashSet<string>();
+    private Coroutine reactionRoutine;
 
     public List<Ghost> ghosts = new List<Ghost>();
 
@@ -585,6 +594,11 @@ public class GameManager : MonoBehaviour
             }
             else if (grid[idx] == null)
             {
+                if (inFirstTutorial && !tutorialSpawnUnlocked)
+                {
+                    status = "FOLLOW TUTORIAL";
+                    return;
+                }
                 if (!frozen) SpawnBoxAtSelector();
                 else ConsumeFrozenAttempt();
             }
@@ -800,15 +814,22 @@ public class GameManager : MonoBehaviour
         }
 
         awaitingDialogue = true;
+        inFirstTutorial = true;
+        tutorialSpawnUnlocked = false;
         currentOrder = null;
         orderSpawnTimer = 0f;
         PopUp.SetDialogueMode(autoAdvance: false, advanceOnEnter: true);
         PopUp.SetPortrait(tutorialPortrait);
+        PopUp.SetLineHook(HandleFirstTutorialLine);
         PopUp.WriteSequence(tutorialSpeakerName, tutorialBeforeFirst, () =>
         {
             awaitingDialogue = false;
             PopUp.SetDialogueMode(autoAdvance: true, advanceOnEnter: false);
             PopUp.SetPortrait(null);
+            PopUp.SetLineHook(null);
+            inFirstTutorial = false;
+            tutorialSpawnUnlocked = true;
+            SetTutorialObjectsActive(-1);
             StartCustomerLevel(0);
         });
     }
@@ -1588,6 +1609,7 @@ public class GameManager : MonoBehaviour
             wantedView?.PlayOrderCompleteTween();
             ScreenShake.Shake();
             score += 100;
+            TriggerReaction(true);
         }
         else
         {
@@ -1597,6 +1619,7 @@ public class GameManager : MonoBehaviour
             PlaySfx("submitwrong");
             wantedView?.PlayOrderFailedTween();
             ScreenShake.Shake();
+            TriggerReaction(false);
             if (reputation <= minReputation) { GameOver(); return; }
         }
 
@@ -2351,6 +2374,21 @@ public class GameManager : MonoBehaviour
         TriggerDeathPopup();
         ScreenShake.Shake();
         gameplayStopped = true;
+    }
+
+    void TriggerReaction(bool happy)
+    {
+        if (reactionRoutine != null) StopCoroutine(reactionRoutine);
+        reactionRoutine = StartCoroutine(CoReaction(happy));
+    }
+
+    System.Collections.IEnumerator CoReaction(bool happy)
+    {
+        if (happyReaction != null) happyReaction.SetActive(happy);
+        if (sadReaction != null) sadReaction.SetActive(!happy);
+        yield return new WaitForSeconds(reactionSeconds);
+        if (happyReaction != null) happyReaction.SetActive(false);
+        if (sadReaction != null) sadReaction.SetActive(false);
     }
 
     void MarkCustomerServed(string id)
@@ -3109,6 +3147,24 @@ int Project(Vector2Int p, Vector2Int dir)
         bool shouldShow = IsFireMageCustomer() && !interactTutorialUsed;
         if (interactTutorial.activeSelf != shouldShow)
             interactTutorial.SetActive(shouldShow);
+    }
+
+    void HandleFirstTutorialLine(int index)
+    {
+        // Activate matching tutorial object (same index as tutorialBeforeFirst)
+        SetTutorialObjectsActive(index);
+        if (index == 1) tutorialSpawnUnlocked = true;
+    }
+
+    void SetTutorialObjectsActive(int activeIndex)
+    {
+        if (tutorialBeforeFirstObjects == null) return;
+        for (int i = 0; i < tutorialBeforeFirstObjects.Count; i++)
+        {
+            var go = tutorialBeforeFirstObjects[i];
+            if (go == null) continue;
+            go.SetActive(i == activeIndex);
+        }
     }
 
     void DisableCellsForEntity(BoxEntity e)

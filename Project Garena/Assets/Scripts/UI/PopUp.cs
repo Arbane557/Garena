@@ -25,6 +25,7 @@ public class PopUp : MonoBehaviour
     private readonly Queue<string> queue = new Queue<string>();
     private Coroutine runner;
     private Action onSequenceComplete;
+    private Action<int> onLineStart;
 
     void Awake()
     {
@@ -78,6 +79,12 @@ public class PopUp : MonoBehaviour
         if (instance == null) return;
         instance.autoAdvanceDialogue = autoAdvance;
         instance.advanceOnEnter = advanceOnEnter;
+    }
+
+    public static void SetLineHook(Action<int> hook)
+    {
+        if (instance == null) return;
+        instance.onLineStart = hook;
     }
 
     public static void SetPortrait(Sprite portrait)
@@ -135,6 +142,7 @@ public class PopUp : MonoBehaviour
         for (int i = 0; i < lines.Count; i++)
         {
             string line = lines[i] ?? "";
+            onLineStart?.Invoke(i);
             yield return StartCoroutine(TypeMessage(line));
             float hold = Mathf.Max(holdSeconds, minHoldSeconds);
             if (autoAdvanceDialogue)
