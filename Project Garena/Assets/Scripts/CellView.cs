@@ -186,9 +186,15 @@ public class CellView : MonoBehaviour
             {
                 background.color = Color.Lerp(baseColor, IceAuraColor, IceAuraColor.a);
             }
+            else if (inGhostAura)
+            {
+                background.color = Color.Lerp(baseColor, GhostAuraColor, GhostAuraColor.a);
+            }
+            else if (inHauntedAura)
+            {
+                background.color = Color.Lerp(baseColor, HauntedAuraColor, HauntedAuraColor.a);
+            }
         }
-        else if (inGhostAura) background.color = GhostAuraColor;
-        else if (inHauntedAura) background.color = HauntedAuraColor;
 
         mainIcon.enabled = false;
         foreach (Transform c in traitIconRow) Destroy(c.gameObject);
