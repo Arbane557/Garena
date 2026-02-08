@@ -1847,6 +1847,10 @@ public class GameManager : MonoBehaviour
                 }
             }
         }
+        if (haunted)
+        {
+            PlaySfx("haunt");
+        }
         return haunted;
     }
 
