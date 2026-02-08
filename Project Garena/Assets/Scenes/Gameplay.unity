@@ -7171,6 +7171,8 @@ MonoBehaviour:
     orders:
     - subType: 2
       requiredTraits: 
+    - subType: 1
+      requiredTraits: 
     enableChaosSpawns: 0
     enableFireSpawns: 0
     fireSpawnInterval: 0
@@ -7195,6 +7197,8 @@ MonoBehaviour:
     orders:
     - subType: 1
       requiredTraits: 00000000
+    - subType: 2
+      requiredTraits: 00000000
     enableChaosSpawns: 0
     enableFireSpawns: 1
     fireSpawnInterval: 5
@@ -7217,7 +7221,9 @@ MonoBehaviour:
     flavorLine: Freeze it. Seal it. Let it linger.
     portrait: {fileID: -4549388218463153738, guid: 5e250abc537ea1d448f54975c77e4e09, type: 3}
     orders:
-    - subType: 2
+    - subType: 0
+      requiredTraits: 01000000
+    - subType: 0
       requiredTraits: 01000000
     enableChaosSpawns: 0
     enableFireSpawns: 0
@@ -7236,11 +7242,37 @@ MonoBehaviour:
     ghostSpawnInterval: 0
     ghostBurstCount: 0
     loopOrders: 0
+  - id: necromancer
+    displayName: Necromancer
+    flavorLine: THE DEAD WILL NOT FORGET!
+    portrait: {fileID: 0}
+    orders:
+    - subType: 1
+      requiredTraits: 
+    - subType: 0
+      requiredTraits: 
+    enableChaosSpawns: 0
+    enableFireSpawns: 0
+    fireSpawnInterval: 0
+    fireBurstCount: 0
+    enableFireSpread: 0
+    fireSpreadInterval: 0
+    fireSpreadChance: 0
+    enableIceSpawns: 0
+    iceSpawnInterval: 0
+    iceBurstCount: 0
+    spawnInitialIceBurst: 0
+    enableIceAura: 0
+    iceToItemSeconds: 0
+    enableGhostSpawns: 1
+    ghostSpawnInterval: 6
+    ghostBurstCount: 3
+    loopOrders: 0
   mageCycleIds: []
   tutorialSpeakerName: Old Man
   tutorialPortrait: {fileID: -6993387854754793676, guid: 74b499072fed5fd4689edb87330b5e3a, type: 3}
   tutorialBeforeFirst:
-  - Welcome. Keep items organized and watch the order box.
+  - Welcome. Your job is to manage the shop's inventory bag.
   - "Top\u2011left is the item conveyor. Press Enter on an empty cell to spawn the
     next item when you need it."
   - "WASD moves the grid cursor. Arrow keys moves the item you\u2019re hovering."
