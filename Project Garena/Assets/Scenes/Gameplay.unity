@@ -7121,6 +7121,8 @@ MonoBehaviour:
     orders:
     - subType: 0
       requiredTraits: 
+    - subType: 1
+      requiredTraits: 
     enableChaosSpawns: 0
     enableFireSpawns: 0
     fireSpawnInterval: 0
@@ -7138,14 +7140,36 @@ MonoBehaviour:
     ghostSpawnInterval: 0
     ghostBurstCount: 0
     loopOrders: 0
+  - id: traveler
+    displayName: Traveler Again
+    flavorLine: Nevermind, i need some food too.
+    portrait: {fileID: -4549388218463153738, guid: 5e250abc537ea1d448f54975c77e4e09, type: 3}
+    orders:
+    - subType: 0
+      requiredTraits: 
+    enableChaosSpawns: 0
+    enableFireSpawns: 0
+    fireSpawnInterval: 0
+    fireBurstCount: 0
+    enableFireSpread: 0
+    fireSpreadInterval: 0
+    fireSpreadChance: 0.35
+    enableIceSpawns: 0
+    iceSpawnInterval: 0
+    iceBurstCount: 0
+    spawnInitialIceBurst: 0
+    enableIceAura: 0
+    iceToItemSeconds: 0
+    enableGhostSpawns: 0
+    ghostSpawnInterval: 0
+    ghostBurstCount: 0
+    loopOrders: 0
   - id: necromancer
     displayName: Necromancer
-    flavorLine: THE DEAD WANTS TOOLS THAT WON'T OBEY!
+    flavorLine: HAHAHA! DON'T EXPECT ME TO FORGET WHAT YOU DID!
     portrait: {fileID: -4412621582066746438, guid: 9434ec3e792713541ac065d08a33e0d0, type: 3}
     orders:
-    - subType: 1
-      requiredTraits: 
-    - subType: 0
+    - subType: 2
       requiredTraits: 
     enableChaosSpawns: 0
     enableFireSpawns: 0
@@ -7162,18 +7186,14 @@ MonoBehaviour:
     iceToItemSeconds: 0
     enableGhostSpawns: 1
     ghostSpawnInterval: 6
-    ghostBurstCount: 2
+    ghostBurstCount: 3
     loopOrders: 0
   - id: fire_mage
     displayName: Fire Mage
-    flavorLine: Heat it. Temper it. Bring it to me.
+    flavorLine: I will burn your shop to ashes!
     portrait: {fileID: -1090375604981771204, guid: b2684d5a5b4240840b0049960618c357, type: 3}
     orders:
     - subType: 1
-      requiredTraits: 00000000
-    - subType: 2
-      requiredTraits: 00000000
-    - subType: 0
       requiredTraits: 00000000
     enableChaosSpawns: 0
     enableFireSpawns: 1
@@ -7194,14 +7214,10 @@ MonoBehaviour:
     loopOrders: 0
   - id: ice_mage
     displayName: Ice Mage
-    flavorLine: Freeze it. Seal it. Let it linger
+    flavorLine: Freeze it. Seal it. Let it linger.
     portrait: {fileID: -4549388218463153738, guid: 5e250abc537ea1d448f54975c77e4e09, type: 3}
     orders:
-    - subType: 1
-      requiredTraits: 01000000
     - subType: 2
-      requiredTraits: 01000000
-    - subType: 0
       requiredTraits: 01000000
     enableChaosSpawns: 0
     enableFireSpawns: 0
@@ -7233,10 +7249,14 @@ MonoBehaviour:
   - Right bar is your reputation. Fail too many orders and the shop shuts down.
   - That's it. You will learn the rest the hard way.
   tutorialAfterBaker:
+  - Well done. I see you're getting the hang of it.
   - I hope this line of work is what you expected.
   tutorialAfterIce:
-  - Have you tried pouring water on those lava blocks?
-  tutorialAtNecromancer:
+  - WHAT'S GOING ON?!
+  - Where are these bastards coming from?!
+  - What kind of bad karma do you got?!
+  - Nothing makes sense anymore! You can have the shop!
+  tutorialAtFireMage:
   - "Press E to use the item you\u2019re holding."
   tutorialBeforeFirstObjects:
   - {fileID: 0}
@@ -7246,13 +7266,13 @@ MonoBehaviour:
   - {fileID: 403268662}
   - {fileID: 1806742171}
   ordersBeforeChaos: 8
-  initialItemCount: 6
+  initialItemCount: 3
   spawnInitialItems: 1
   spawnInitialTraits: 0
   allowTraitTilesBeforeChaos: 0
   allowGhostsBeforeChaos: 0
   forceFirstChaosOrder: 1
-  initialSpawnBottomRows: 10
+  initialSpawnBottomRows: 3
   initialSpawnClusterRadius: 5
   chaosTint: {fileID: 0}
   chaosTintAlpha: 0.25
@@ -8970,7 +8990,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Press E To Use Selected Item
+  m_text: "Press E to use the item you\u2019re holding."
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 10056a7e99eef624b898d6d9dc043f90, type: 2}
   m_sharedMaterial: {fileID: -4904004175176031087, guid: 10056a7e99eef624b898d6d9dc043f90, type: 2}

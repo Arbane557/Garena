@@ -125,7 +125,7 @@ public class GameManager : MonoBehaviour
     {
         "Have you tried pouring water on those lava blocks?"
     };
-    [TextArea(2, 6)] public List<string> tutorialAtNecromancer = new List<string>
+    [TextArea(2, 6)] public List<string> tutorialAtFireMage = new List<string>
     {
         "Press E to use the item you’re holding."
     };
