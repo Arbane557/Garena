@@ -18,7 +18,6 @@ public class GameManager : MonoBehaviour
     [Header("Config")]
     public int gridSize = 10;
     public float tickRateSeconds = 1.5f;
-    public int deliveryZoneCount = 5;
     public int initialTraitCount = 15;
 
     [Header("UI (uGUI + TMP)")]
@@ -27,7 +26,6 @@ public class GameManager : MonoBehaviour
 
     public TMP_Text reputationText;
     public TMP_Text orderTimerText;
-    public TMP_Text orderTimerStatusText;
     public TMP_Text loseScoreText;
     public TMP_Text loseServedText;
     public TMP_Text fullnessText;
@@ -232,7 +230,6 @@ public class GameManager : MonoBehaviour
 
     // STATE
     private BoxEntity[] grid;
-    private List<Vector2Int> deliveryZones = new List<Vector2Int>();
     private Queue<ItemSubType> conveyor = new Queue<ItemSubType>();
     private List<ItemSubType> itemBag = new List<ItemSubType>();
     private ItemSubType? lastQueuedItem = null;
@@ -247,9 +244,7 @@ public class GameManager : MonoBehaviour
 
     private float tickTimer = 0f;
     private float sentientTickTimer = 0f;
-    private float ghostSpawnTimer = 0f;
     private float traitSpawnTimer = 0f;
-    private float itemSpawnTimer = 0f;
     private float ghostMoveTimer = 0f;
     private float lastActionTimer = 0f;
     private float heat = 0f;
@@ -313,7 +308,6 @@ public class GameManager : MonoBehaviour
     private HashSet<string> servedCustomerIds = new HashSet<string>();
     private Coroutine reactionRoutine;
 
-    public List<Ghost> ghosts = new List<Ghost>();
 
     private CellView[] cells;
     private System.Random rng;
@@ -334,7 +328,6 @@ public class GameManager : MonoBehaviour
         EnsureUIForDragging();
 
         BuildGridUI();
-        InitDeliveryZones();
         InitConveyor();
         if (spawnInitialItems) InitInitialItems();
         if (spawnInitialTraits) InitInitialTraits();      // optional (spawns initial traits on boxes if you want, else remove)
@@ -469,11 +462,6 @@ public class GameManager : MonoBehaviour
             cv.Init(() => OnCellClicked(idx));
             cells[i] = cv;
         }
-    }
-
-    void InitDeliveryZones()
-    {
-        deliveryZones.Clear();
     }
 
     void InitConveyor()
@@ -1860,19 +1848,6 @@ public class GameManager : MonoBehaviour
             }
         }
         return haunted;
-    }
-
-    void GhostStep(Ghost g)
-    {
-        var dirs = new[] {
-            new Vector2Int(1,0), new Vector2Int(-1,0),
-            new Vector2Int(0,1), new Vector2Int(0,-1)
-        };
-        var d = dirs[rng.Next(0, dirs.Length)];
-        var np = g.pos + d;
-        if (!InBounds(np)) return;
-
-        g.pos = np;
     }
 
     // ----------------------------
