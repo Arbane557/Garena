@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: aff924d8775855c4b8a68346c3800e1f
+guid: e45abc81cf18ceb4ba3fcaca920ee73c
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -3743436131352409583
-    second: icon_sentient_0
+      213: -2812783792868389595
+    second: Icon_sentient_imresizer_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: icon_sentient_0
+      name: Icon_sentient_imresizer_0
       rect:
         serializedVersion: 2
-        x: 35
-        y: 31
-        width: 28
-        height: 30
+        x: 0
+        y: 0
+        width: 32
+        height: 32
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 11a806f0ca4ac0cc0800000000000000
-      internalID: -3743436131352409583
+      spriteID: 52d8a1c0b0cf6f8d0800000000000000
+      internalID: -2812783792868389595
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      icon_sentient_0: -3743436131352409583
+      Icon_sentient_imresizer_0: -2812783792868389595
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

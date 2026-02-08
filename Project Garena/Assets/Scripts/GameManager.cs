@@ -28,6 +28,8 @@ public class GameManager : MonoBehaviour
     public TMP_Text reputationText;
     public TMP_Text orderTimerText;
     public TMP_Text orderTimerStatusText;
+    public TMP_Text loseScoreText;
+    public TMP_Text loseServedText;
     public TMP_Text fullnessText;
     public TMP_Text statusText;
     public Image energyFill;
@@ -52,6 +54,21 @@ public class GameManager : MonoBehaviour
     public GameObject freezeDamageFlash;
     public float flashDuration = 0.15f;
     public float flashCooldown = 0.2f;
+    [Header("Lose Condition")]
+    public GameObject loseGameObject;
+    public GameObject loseScreenRoot;
+    [Range(0f, 1f)] public float staminaLoseThresholdPct = 0.01f;
+    public float loseCountDuration = 1.0f;
+    public float losePunchScale = 0.15f;
+    [TextArea(2, 6)] public List<string> deathLines = new List<string>
+    {
+        "The lights dim. The shelves feel too heavy tonight.",
+        "You close up early, promising yourself it's only for now.",
+        "The ledger doesn't scream. It simply goes quiet.",
+        "You lock the door and let the silence do the talking.",
+        "The shop exhales. You decide to listen.",
+        "You count the day twice, then stop counting."
+    };
 
     public WantedView wantedView;
     public BufferView bufferView;
@@ -164,6 +181,9 @@ public class GameManager : MonoBehaviour
     public float coldRecoverRate = 8f;
     public float heatOverload = 24f;
     public float coldOverload = 20f;
+    [Header("Status Safety")]
+    public bool clampStatusValues = true;
+    public float statusClampMax = 500f;
 
     [Header("Fire Aura")]
     public float fireAuraDamagePerSecond = 8f;
@@ -271,6 +291,12 @@ public class GameManager : MonoBehaviour
     private float hpFlashTimer = 0f;
     private float hotFlashTimer = 0f;
     private float coldFlashTimer = 0f;
+    private bool deathTriggered = false;
+    private bool gameplayStopped = false;
+    private bool loseSequencePlayed = false;
+    private int score = 0;
+    private int servedCustomers = 0;
+    private HashSet<string> servedCustomerIds = new HashSet<string>();
 
     public List<Ghost> ghosts = new List<Ghost>();
 
@@ -308,6 +334,11 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
+        if (gameplayStopped)
+        {
+            RenderHud();
+            return;
+        }
         HandleInput();
 
         // Timers
@@ -746,83 +777,6 @@ public class GameManager : MonoBehaviour
     void EnsureCustomerLevels()
     {
         if (customerLevels != null && customerLevels.Count > 0) return;
-
-        // customerLevels = new List<CustomerLevel>
-        // {
-        //     new CustomerLevel
-        //     {
-        //         id = "traveler",
-        //         displayName = "Traveler",
-        //         flavorLine = "I have a long road ahead. Keep it simple.",
-        //         orders = new List<OrderSpec>
-        //         {
-        //             OrderSpec.Of(ItemSubType.Knife)
-        //         },
-        //         enableChaosSpawns = false,
-        //         enableFireSpawns = false
-        //     },
-        //     new CustomerLevel
-        //     {
-        //         id = "baker",
-        //         displayName = "Baker",
-        //         flavorLine = "Bread and blades. I burn through both.",
-        //         orders = new List<OrderSpec>
-        //         {
-        //             OrderSpec.Of(ItemSubType.Bread),
-        //             OrderSpec.Of(ItemSubType.Bread)
-        //         },
-        //         enableChaosSpawns = false,
-        //         enableFireSpawns = false
-        //     },
-        //     new CustomerLevel
-        //     {
-        //         id = "necromancer",
-        //         displayName = "Necromancer",
-        //         flavorLine = "THE DEAD WANTS TOOLS THAT WON'T OBEY!",
-        //         orders = new List<OrderSpec>
-        //         {
-        //             OrderSpec.Of(ItemSubType.Knife)
-        //         },
-        //         enableChaosSpawns = false,
-        //         enableGhostSpawns = true,
-        //         ghostSpawnInterval = 6f,
-        //         ghostBurstCount = 2
-        //     },
-        //     new CustomerLevel
-        //     {
-        //         id = "fire_mage",
-        //         displayName = "Fire Mage",
-        //         flavorLine = "Heat it. Temper it. Bring it to me.",
-        //         orders = new List<OrderSpec>
-        //         {
-        //             OrderSpec.Of(ItemSubType.Bread, TraitType.Fire)
-        //         },
-        //         enableChaosSpawns = false,
-        //         enableFireSpawns = true,
-        //         fireSpawnInterval = 5f,
-        //         fireBurstCount = 2,
-        //         enableFireSpread = true,
-        //         fireSpreadInterval = 6f,
-        //         fireSpreadChance = 0.35f
-        //     },
-        //     new CustomerLevel
-        //     {
-        //         id = "ice_mage",
-        //         displayName = "Ice Mage",
-        //         flavorLine = "Freeze it. Seal it. Let it linger.",
-        //         orders = new List<OrderSpec>
-        //         {
-        //             OrderSpec.Of(ItemSubType.Bread, TraitType.Ice)
-        //         },
-        //         enableChaosSpawns = false,
-        //         enableIceSpawns = false,
-        //         iceSpawnInterval = 8f,
-        //         iceBurstCount = 2,
-        //         spawnInitialIceBurst = true,
-        //         enableIceAura = true,
-        //         iceToItemSeconds = 1f
-        //     },
-        // };
     }
 
     void EnsureMageCycleDefaults()
@@ -932,6 +886,7 @@ public class GameManager : MonoBehaviour
         if (level.orders == null || currentCustomerOrderIndex >= level.orders.Count)
         {
             Debug.Log($"[Customer] Complete {level.id}");
+            MarkCustomerServed(level.id);
             if (level.id == "necromancer")
             {
                 interactTutorialUsed = true;
@@ -1585,6 +1540,7 @@ public class GameManager : MonoBehaviour
             PlaySfx("submitsuccess");
             wantedView?.PlayOrderCompleteTween();
             ScreenShake.Shake();
+            score += 100;
         }
         else
         {
@@ -2201,6 +2157,19 @@ public class GameManager : MonoBehaviour
         cold = cold + (holdingIce ? coldBuildRate : -coldRecoverRate) * dt;
         if (heat < 0f) heat = 0f;
         if (cold < 0f) cold = 0f;
+        if (float.IsNaN(heat) || float.IsInfinity(heat)) heat = 0f;
+        if (float.IsNaN(cold) || float.IsInfinity(cold)) cold = 0f;
+        if (clampStatusValues)
+        {
+            heat = Mathf.Min(heat, statusClampMax);
+            cold = Mathf.Min(cold, statusClampMax);
+        }
+        if (heat >= statusClampMax || cold >= statusClampMax)
+        {
+            status = "STATUS OVERLOAD";
+            TriggerLose();
+            return;
+        }
 
         L_heat = heat;
         L_cold = cold;
@@ -2221,9 +2190,10 @@ public class GameManager : MonoBehaviour
         float E_max_eff = Mathf.Max(0f, E_max_base - L_total);
         E = Mathf.Clamp(E, 0f, E_max_eff);
 
-        if (E_max_eff <= 0f)
+        if (E_max_eff <= E_max_base * staminaLoseThresholdPct)
         {
             status = "CAPACITY COLLAPSE";
+            TriggerLose();
             return;
         }
 
@@ -2308,6 +2278,83 @@ public class GameManager : MonoBehaviour
         cg.DOKill();
         cg.alpha = 1f;
         cg.DOFade(0f, flashDuration).SetEase(Ease.OutQuad).SetUpdate(true);
+    }
+
+    void TriggerDeathPopup()
+    {
+        if (deathTriggered) return;
+        deathTriggered = true;
+
+        string line = "The day ends quietly.";
+        if (deathLines != null && deathLines.Count > 0)
+        {
+            line = deathLines[rng.Next(0, deathLines.Count)];
+        }
+
+        PopUp.SetPortrait(tutorialPortrait);
+        PopUp.Write(tutorialSpeakerName, line);
+        PlayLoseSequence();
+    }
+
+    void TriggerLose()
+    {
+        if (deathTriggered) return;
+        if (loseGameObject != null) loseGameObject.SetActive(true);
+        if (loseScreenRoot != null) loseScreenRoot.SetActive(true);
+        TriggerDeathPopup();
+        ScreenShake.Shake();
+        gameplayStopped = true;
+    }
+
+    void MarkCustomerServed(string id)
+    {
+        if (string.IsNullOrWhiteSpace(id)) return;
+        if (servedCustomerIds.Add(id))
+        {
+            servedCustomers++;
+        }
+    }
+
+    void PlayLoseSequence()
+    {
+        if (loseSequencePlayed) return;
+        loseSequencePlayed = true;
+        StartCoroutine(CoLoseCount());
+    }
+
+    System.Collections.IEnumerator CoLoseCount()
+    {
+        float t = 0f;
+        int startScore = 0;
+        int targetScore = Mathf.Max(0, score);
+        int startServed = 0;
+        int targetServed = Mathf.Max(0, servedCustomers);
+
+        while (t < loseCountDuration)
+        {
+            t += Time.unscaledDeltaTime;
+            float u = Mathf.Clamp01(t / Mathf.Max(0.01f, loseCountDuration));
+            int s = Mathf.RoundToInt(Mathf.Lerp(startScore, targetScore, u));
+            int c = Mathf.RoundToInt(Mathf.Lerp(startServed, targetServed, u));
+            if (loseScoreText != null) loseScoreText.text = s.ToString();
+            if (loseServedText != null) loseServedText.text = $"Served {c} Customer";
+            yield return null;
+        }
+
+        if (loseScoreText != null)
+        {
+            var rt = loseScoreText.rectTransform;
+            rt.DOKill();
+            rt.localScale = Vector3.one;
+            rt.DOPunchScale(Vector3.one * losePunchScale, 0.2f, 10, 0.7f).SetUpdate(true);
+        }
+        if (loseServedText != null)
+        {
+            var rt = loseServedText.rectTransform;
+            rt.DOKill();
+            rt.localScale = Vector3.one;
+            rt.DOPunchScale(Vector3.one * losePunchScale, 0.2f, 10, 0.7f).SetUpdate(true);
+        }
     }
 
     float Smoothstep(float a, float b, float x)

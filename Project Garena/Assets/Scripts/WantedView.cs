@@ -44,6 +44,7 @@ public class WantedView : MonoBehaviour
 
     private string lastPopupName;
     private string lastPopupLine;
+    private bool inSetWanted = false;
 
     void Awake()
     {
@@ -99,6 +100,10 @@ public class WantedView : MonoBehaviour
 
     public void SetWanted(ItemSubType subType, IReadOnlyList<TraitType> requiredTraits, float timeLeft, float timeTotal, string customerName, string flavorLine)
     {
+        if (inSetWanted) return;
+        inSetWanted = true;
+        try
+        {
         if (itemIcon != null) itemIcon.sprite = ItemSprite(subType);
         if (itemIcon != null) itemIcon.enabled = true;
         ApplyItemIconLayout(subType);
@@ -141,6 +146,11 @@ public class WantedView : MonoBehaviour
         {
             float t = (timeTotal <= 0f) ? 0f : Mathf.Clamp01(timeLeft / timeTotal);
             timerFill.fillAmount = t;
+        }
+        }
+        finally
+        {
+            inSetWanted = false;
         }
     }
 

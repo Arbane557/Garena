@@ -56,9 +56,9 @@ public class CellView : MonoBehaviour
     public float popDuration = 0.18f;
     public float selectPulseScale = 0.06f;
     public float selectPulseDuration = 0.12f;
-    [Header("Slide Visuals")]
-    public GameObject slideTrail;
-    public float slideTrailSeconds = 0.2f;
+    [Header("Ice Trail")]
+    public GameObject iceTrailPrefab;
+    public float iceTrailMoveSeconds = 0.2f;
     [Header("Submit Tween")]
     public float submitTweenUp = 24f;
     public float submitTweenDuration = 0.2f;
@@ -69,6 +69,7 @@ public class CellView : MonoBehaviour
     private string lastEntityId;
     private int lastTraitCount;
     private FrameAnimator frameAnimator;
+    private GameObject iceTrailInstance;
 
     public void Init(System.Action onClick)
     {
@@ -169,12 +170,23 @@ public class CellView : MonoBehaviour
     {
         outline.enabled = selected;
 
+        Color baseColor = background != null ? background.color : Color.white;
         if (useInspectorColors && background != null)
         {
-            background.color = isZone ? zoneBgColor : normalBgColor;
+            baseColor = isZone ? zoneBgColor : normalBgColor;
+            background.color = baseColor;
         }
-        if (inFireAura) background.color = FireAuraColor;
-        else if (inIceAura) background.color = IceAuraColor;
+        if (background != null)
+        {
+            if (inFireAura)
+            {
+                background.color = Color.Lerp(baseColor, FireAuraColor, FireAuraColor.a);
+            }
+            else if (inIceAura)
+            {
+                background.color = Color.Lerp(baseColor, IceAuraColor, IceAuraColor.a);
+            }
+        }
         else if (inGhostAura) background.color = GhostAuraColor;
         else if (inHauntedAura) background.color = HauntedAuraColor;
 
@@ -183,6 +195,7 @@ public class CellView : MonoBehaviour
 
         if (e == null)
         {
+            SetIceTrail(false);
             if (frameAnimator != null) frameAnimator.Stop();
             mainIcon.sprite = null;
             hadEntity = false;
@@ -209,6 +222,7 @@ public class CellView : MonoBehaviour
             ApplySize(e.size);
             AnimateMove(cellPos, fromPos);
             PlayTraitAnimation(e.tileTrait);
+            SetIceTrail(false);
             return;
         }
 
@@ -216,6 +230,9 @@ public class CellView : MonoBehaviour
         ApplySize(e.size);
         AnimateMove(cellPos, fromPos);
         PlayItemAnimation(e.subType);
+        bool hasIce = e.traits != null && e.traits.Contains(TraitType.Ice);
+        SetIceTrail(hasIce);
+        if (hasIce) AnimateIceTrail(fromPos, cellPos);
 
         foreach (var t in e.traits)
         {
@@ -286,6 +303,26 @@ public class CellView : MonoBehaviour
     {
         var rt = mainIcon.rectTransform;
         rt.DOKill();
+        rt.anchoredPosition = baseOffset;
+    }
+
+    void SetIceTrail(bool on)
+    {
+        if (iceTrailPrefab == null) return;
+        if (iceTrailInstance == null)
+        {
+            iceTrailInstance = Object.Instantiate(iceTrailPrefab, transform);
+        }
+        if (iceTrailInstance == null) return;
+        iceTrailInstance.transform.SetParent(transform, false);
+        iceTrailInstance.SetActive(on);
+    }
+
+    void AnimateIceTrail(Vector2Int fromPos, Vector2Int cellPos)
+    {
+        if (iceTrailInstance == null) return;
+        var rt = iceTrailInstance.GetComponent<RectTransform>();
+        if (rt == null) return;
 
         var grid = GetComponentInParent<GridLayoutGroup>();
         Vector2 cellSize = grid != null ? grid.cellSize : new Vector2(40, 40);
@@ -293,31 +330,11 @@ public class CellView : MonoBehaviour
         Vector2 step = cellSize + spacing;
 
         Vector2 deltaCells = new Vector2(fromPos.x - cellPos.x, fromPos.y - cellPos.y);
-        Vector2 startOffset = baseOffset + new Vector2(deltaCells.x * step.x, -deltaCells.y * step.y);
+        Vector2 startOffset = new Vector2(deltaCells.x * step.x, -deltaCells.y * step.y);
 
-        float dist = Mathf.Abs(deltaCells.x) + Mathf.Abs(deltaCells.y);
-        if (dist <= 1f)
-        {
-            rt.anchoredPosition = baseOffset;
-            return;
-        }
-
+        rt.DOKill();
         rt.anchoredPosition = startOffset;
-        float dur = Mathf.Max(0.01f, moveTweenSeconds * dist);
-        rt.DOAnchorPos(baseOffset, dur).SetEase(moveEase);
-        ActivateSlideTrail(dur);
-    }
-
-    void ActivateSlideTrail(float duration)
-    {
-        if (slideTrail == null) return;
-        slideTrail.SetActive(true);
-        slideTrail.transform.DOKill();
-        slideTrail.transform.SetParent(transform, false);
-        DOVirtual.DelayedCall(Mathf.Max(slideTrailSeconds, duration), () =>
-        {
-            if (slideTrail != null) slideTrail.SetActive(false);
-        });
+        rt.DOAnchorPos(Vector2.zero, iceTrailMoveSeconds).SetEase(Ease.OutQuad);
     }
 
     Sprite BoxSprite(ItemSubType st)
