@@ -3,7 +3,6 @@ using UnityEngine.UI;
 
 public class PeakBarTester : MonoBehaviour
 {
-    [Header("Segments (Images)")]
     public Image energyFill;
     public Image hpLockFill;
     public Image weightLockFill;
