@@ -57,6 +57,8 @@ public class BoxEntity
     public void AddTrait(TraitType t)
     {
         if (traits == null) traits = new HashSet<TraitType>();
+        if (t == TraitType.Fire) traits.Remove(TraitType.Ice);
+        if (t == TraitType.Ice) traits.Remove(TraitType.Fire);
         traits.Add(t);
 
         if (t == TraitType.Fire)
