@@ -209,7 +209,7 @@ public class GameManager : MonoBehaviour
     public float waterSplashHoldSeconds = 0.12f;
     public float waterSplashOutSeconds = 0.22f;
     public float waterSplashMaxDelay = 0.08f;
-    [Range(0f, 1f)] public float waterSplashExtraChance = 0.12f;
+    [Range(0f, 1f)] public float waterSplashExtraChance = 0.06f;
     public int waterSplashExtraLeft = 1;
     public int waterSplashExtraRight = 1;
     public int waterSplashExtraUp = 1;
@@ -293,7 +293,7 @@ public class GameManager : MonoBehaviour
     private bool awaitingDialogue = false;
     private bool postOldManLoop = false;
     private bool shownAfterIceDialogue = false;
-    private bool shownNecromancerUseTutorial = false;
+    private bool shownFireMageUseTutorial = false;
     private float fireHurtSfxTimer = 0f;
     private float iceHurtSfxTimer = 0f;
     private bool inFirstTutorial = false;
@@ -848,9 +848,9 @@ public class GameManager : MonoBehaviour
         UpdateInteractTutorial();
         UpdatePortalsForLevel(level);
 
-        if (level.id == "necromancer" && !shownNecromancerUseTutorial)
+        if (level.id == "fire_mage" && !shownFireMageUseTutorial)
         {
-            shownNecromancerUseTutorial = true;
+            shownFireMageUseTutorial = true;
             interactTutorialUsed = false;
             UpdateInteractTutorial();
         }
@@ -914,7 +914,7 @@ public class GameManager : MonoBehaviour
         {
             Debug.Log($"[Customer] Complete {level.id}");
             MarkCustomerServed(level.id);
-            if (level.id == "necromancer")
+            if (level.id == "fire_mage")
             {
                 interactTutorialUsed = true;
                 UpdateInteractTutorial();
@@ -1310,18 +1310,18 @@ public class GameManager : MonoBehaviour
         return list;
     }
 
-    void PlayWaterSplash(Vector2Int center, Color color)
+    void PlayWaterSplash(Vector2Int center, Color color, int baseLeft, int baseRight, int baseUp, int baseDown)
     {
         if (cells == null) return;
         var positions = new HashSet<Vector2Int>();
-        foreach (var p in GetPositionsInRect(center, left: 1, right: 1, up: 1, down: 2))
+        foreach (var p in GetPositionsInRect(center, left: baseLeft, right: baseRight, up: baseUp, down: baseDown))
             positions.Add(p);
 
         var extra = GetPositionsInRect(center,
-            left: 1 + waterSplashExtraLeft,
-            right: 1 + waterSplashExtraRight,
-            up: 1 + waterSplashExtraUp,
-            down: 2 + waterSplashExtraDown);
+            left: baseLeft + waterSplashExtraLeft,
+            right: baseRight + waterSplashExtraRight,
+            up: baseUp + waterSplashExtraUp,
+            down: baseDown + waterSplashExtraDown);
         foreach (var p in extra)
         {
             if (positions.Contains(p)) continue;
@@ -1338,6 +1338,11 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    void PlayWaterSplash(Vector2Int center, Color color)
+    {
+        PlayWaterSplash(center, color, baseLeft: 2, baseRight: 2, baseUp: 2, baseDown: 2);
+    }
+
     void PlaySwordFlash(Vector2Int center, Color color)
     {
         if (cells == null) return;
@@ -1351,19 +1356,13 @@ public class GameManager : MonoBehaviour
 
     void ApplyPotionTraitBurst(Vector2Int center, TraitType trait)
     {
-        var positions = GetPositionsInRect(center, left: 2, right: 2, up: 2, down: 3);
+        var positions = GetPositionsInRect(center, left: 1, right: 1, up: 1, down: 1);
         foreach (var p in positions)
         {
             int idx = PosToIdx(p);
             if (idx < 0 || idx >= grid.Length) continue;
             var e = grid[idx];
-            if (e == null)
-            {
-                var tile = BoxEntity.CreateTraitTile(trait);
-                tile.size = Vector2Int.one;
-                PlaceEntity(tile, p);
-                continue;
-            }
+            if (e == null) continue;
 
             if (IsGhost(e))
             {
@@ -1385,12 +1384,10 @@ public class GameManager : MonoBehaviour
                 }
                 continue;
             }
-
-            e.AddTrait(trait);
         }
 
         var splashColor = (trait == TraitType.Fire) ? fireSplashColor : iceSplashColor;
-        PlayWaterSplash(center, splashColor);
+        PlayWaterSplash(center, splashColor, baseLeft: 1, baseRight: 1, baseUp: 1, baseDown: 1);
     }
 
     void PlayGhostSpawnAura(Vector2Int center)
@@ -3080,7 +3077,7 @@ int Project(Vector2Int p, Vector2Int dir)
     void UpdateInteractPointer()
     {
         if (interactPointer == null || cells == null) return;
-        if (!IsNecromancerCustomer())
+        if (!IsFireMageCustomer())
         {
             if (interactPointer.activeSelf) interactPointer.SetActive(false);
             return;
@@ -3138,16 +3135,16 @@ int Project(Vector2Int p, Vector2Int dir)
         return cv != null ? cv.transform.position : Vector3.zero;
     }
 
-    bool IsNecromancerCustomer()
+    bool IsFireMageCustomer()
     {
         return !string.IsNullOrWhiteSpace(currentCustomerName) &&
-               currentCustomerName.Trim().Equals("Necromancer", System.StringComparison.OrdinalIgnoreCase);
+               currentCustomerName.Trim().Equals("Fire Mage", System.StringComparison.OrdinalIgnoreCase);
     }
 
     void UpdateInteractTutorial()
     {
         if (interactTutorial == null) return;
-        bool shouldShow = IsNecromancerCustomer() && !interactTutorialUsed;
+        bool shouldShow = IsFireMageCustomer() && !interactTutorialUsed;
         if (interactTutorial.activeSelf != shouldShow)
             interactTutorial.SetActive(shouldShow);
     }
