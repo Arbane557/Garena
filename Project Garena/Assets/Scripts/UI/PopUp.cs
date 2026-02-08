@@ -36,7 +36,6 @@ public class PopUp : MonoBehaviour
         }
 
         instance = this;
-        DontDestroyOnLoad(gameObject);
         EnsureUI();
         HideInstant();
     }
@@ -169,7 +168,6 @@ public class PopUp : MonoBehaviour
 
     private IEnumerator WaitForAdvance()
     {
-        // Wait for key release to avoid immediately skipping due to held Enter.
         var kb = Keyboard.current;
         while (kb != null && kb.spaceKey.isPressed)
         {
@@ -194,7 +192,7 @@ public class PopUp : MonoBehaviour
             var kb = Keyboard.current;
             if (kb != null && kb.spaceKey.wasPressedThisFrame)
             {
-                yield break; // skip hold and advance immediately
+                yield break;
             }
             timer += Time.deltaTime;
             yield return null;

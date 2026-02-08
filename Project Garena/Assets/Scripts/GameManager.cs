@@ -324,6 +324,7 @@ public class GameManager : MonoBehaviour
     {
         grid = new BoxEntity[gridSize * gridSize];
         E = E_max_base;
+        ValidateDamageSettings();
         BuildPeakBarIfMissing();
         EnsureUIForDragging();
 
@@ -338,6 +339,22 @@ public class GameManager : MonoBehaviour
 
         RenderAll();
         RefreshBagBoundary();
+    }
+
+    void ValidateDamageSettings()
+    {
+        if (L_hp_cap <= 0f) L_hp_cap = 60f;
+        if (E_max_base <= 0f) E_max_base = 100f;
+        if (dmgWrong <= 0f) dmgWrong = 12f;
+        if (orderExpireHpDamage <= 0f) orderExpireHpDamage = 6f;
+        if (fireAuraDamagePerSecond <= 0f) fireAuraDamagePerSecond = 8f;
+        if (iceAuraDamagePerSecond <= 0f) iceAuraDamagePerSecond = 4f;
+        if (heatBuildRate <= 0f) heatBuildRate = 8f;
+        if (coldBuildRate <= 0f) coldBuildRate = 6f;
+        if (heatRecoverRate <= 0f) heatRecoverRate = 10f;
+        if (coldRecoverRate <= 0f) coldRecoverRate = 8f;
+        if (heatMax <= 0f) heatMax = 30f;
+        if (coldMax <= 0f) coldMax = 25f;
     }
 
     void Update()
