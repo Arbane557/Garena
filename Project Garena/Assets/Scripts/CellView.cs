@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using DG.Tweening;
@@ -50,8 +49,6 @@ public class CellView : MonoBehaviour
     private Button btn;
     private RectTransform rootRect;
     private Vector2 baseOffset;
-    public float moveTweenSeconds = 0.12f;
-    public Ease moveEase = Ease.OutQuad;
     public float popScale = 0.12f;
     public float popDuration = 0.18f;
     public float selectPulseScale = 0.06f;
