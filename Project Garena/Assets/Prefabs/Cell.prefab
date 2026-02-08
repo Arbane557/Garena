@@ -222,18 +222,21 @@ MonoBehaviour:
   traitIconRow: {fileID: 9177288604861638592}
   traitIconPrefab: {fileID: 1491960634412083393, guid: b7fdd049fb406464182ae7c586632612, type: 3}
   outline: {fileID: 3952280633453454103}
+  fxOverlay: {fileID: 0}
   useInspectorColors: 1
   normalBgColor: {r: 0.15686275, g: 0.13333334, b: 0.3647059, a: 0.42745098}
   zoneBgColor: {r: 1, g: 1, b: 1, a: 0.4}
   IceAuraColor: {r: 0.5801887, g: 1, b: 0.98119223, a: 0.2901961}
   FireAuraColor: {r: 1, g: 0.337255, b: 0.33725488, a: 0.2901961}
+  HauntedAuraColor: {r: 0.45, g: 0.1, b: 0.6, a: 1}
+  GhostAuraColor: {r: 0.45, g: 0.1, b: 0.6, a: 1}
   breadSprite: {fileID: 21300000, guid: c5eb435f9bc17524ea754997c5f9610c, type: 3}
   knifeSprite: {fileID: 21300000, guid: 76e3019793f0ddc40a0df95fbc587e07, type: 3}
   waterBottleSprite: {fileID: 21300000, guid: d3f2e87195a00b04d89dd10b601d9239, type: 3}
   ghostSprite: {fileID: 224562474707688253, guid: a6a9db375518ab94ab1984ae2c844af8, type: 3}
   fireSprite: {fileID: 1098286324429101383, guid: dd4ddcdf8661c3e48a5fc4881129d842, type: 3}
   iceSprite: {fileID: -7560284153744367771, guid: cebdd181591681743bdc53f6c0ca4e73, type: 3}
-  sentientSprite: {fileID: 21300000, guid: aff924d8775855c4b8a68346c3800e1f, type: 3}
+  sentientSprite: {fileID: -3743436131352409583, guid: aff924d8775855c4b8a68346c3800e1f, type: 3}
   hauntedSprite: {fileID: 21300000, guid: a5b4534dad2e3fc42b0e962786192b27, type: 3}
   traitFireSprite: {fileID: 21300000, guid: 0d8dcbf33b200104bae8640ce5e2ff59, type: 3}
   traitIceSprite: {fileID: 21300000, guid: 546db8a9b2dfaeb48b0a8db70a751350, type: 3}
@@ -269,6 +272,11 @@ MonoBehaviour:
   popDuration: 0.18
   selectPulseScale: 0.06
   selectPulseDuration: 0.12
+  slideTrail: {fileID: 1186935493703658403, guid: 893f242d698121c4daaafdbc66086c8d, type: 3}
+  slideTrailSeconds: 1
+  submitTweenUp: 24
+  submitTweenDuration: 0.2
+  submitPunchScale: 0.2
 --- !u!1 &5111166945738807891
 GameObject:
   m_ObjectHideFlags: 0

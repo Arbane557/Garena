@@ -89,6 +89,7 @@ public class GameManager : MonoBehaviour
     public List<CustomerLevel> customerLevels = new List<CustomerLevel>();
     public List<string> mageCycleIds = new List<string>();
     public string tutorialSpeakerName = "Guide";
+    public Sprite tutorialPortrait;
     [TextArea(2, 6)] public List<string> tutorialBeforeFirst = new List<string>
     {
         "Welcome. Keep items organized and watch the order box.",
@@ -746,83 +747,82 @@ public class GameManager : MonoBehaviour
     {
         if (customerLevels != null && customerLevels.Count > 0) return;
 
-        customerLevels = new List<CustomerLevel>
-        {
-            new CustomerLevel
-            {
-                id = "traveler",
-                displayName = "Traveler",
-                flavorLine = "I have a long road ahead. Keep it simple.",
-                orders = new List<OrderSpec>
-                {
-                    OrderSpec.Of(ItemSubType.Knife)
-                },
-                enableChaosSpawns = false,
-                enableFireSpawns = false
-            },
-            new CustomerLevel
-            {
-                id = "baker",
-                displayName = "Baker",
-                flavorLine = "Bread and blades. I burn through both.",
-                orders = new List<OrderSpec>
-                {
-                    OrderSpec.Of(ItemSubType.Bread),
-                    OrderSpec.Of(ItemSubType.Bread)
-                },
-                enableChaosSpawns = false,
-                enableFireSpawns = false
-            },
-            new CustomerLevel
-            {
-                id = "necromancer",
-                displayName = "Necromancer",
-                flavorLine = "THE DEAD WANTS TOOLS THAT WON'T OBEY!",
-                orders = new List<OrderSpec>
-                {
-                    OrderSpec.Of(ItemSubType.Knife)
-                },
-                enableChaosSpawns = false,
-                enableGhostSpawns = true,
-                ghostSpawnInterval = 6f,
-                ghostBurstCount = 2
-            },
-            new CustomerLevel
-            {
-                id = "fire_mage",
-                displayName = "Fire Mage",
-                flavorLine = "Heat it. Temper it. Bring it to me.",
-                orders = new List<OrderSpec>
-                {
-                    OrderSpec.Of(ItemSubType.Bread, TraitType.Fire)
-                },
-                enableChaosSpawns = false,
-                enableFireSpawns = true,
-                fireSpawnInterval = 5f,
-                fireBurstCount = 2,
-                enableFireSpread = true,
-                fireSpreadInterval = 6f,
-                fireSpreadChance = 0.35f
-            },
-            new CustomerLevel
-            {
-                id = "ice_mage",
-                displayName = "Ice Mage",
-                flavorLine = "Freeze it. Seal it. Let it linger.",
-                orders = new List<OrderSpec>
-                {
-                    OrderSpec.Of(ItemSubType.Bread, TraitType.Ice)
-                },
-                enableChaosSpawns = false,
-                enableIceSpawns = false,
-                iceSpawnInterval = 8f,
-                iceBurstCount = 2,
-                spawnInitialIceBurst = true,
-                enableIceAura = true,
-                iceToItemSeconds = 1f
-            },
-            // Old Man removed as a customer. Scripted line only.
-        };
+        // customerLevels = new List<CustomerLevel>
+        // {
+        //     new CustomerLevel
+        //     {
+        //         id = "traveler",
+        //         displayName = "Traveler",
+        //         flavorLine = "I have a long road ahead. Keep it simple.",
+        //         orders = new List<OrderSpec>
+        //         {
+        //             OrderSpec.Of(ItemSubType.Knife)
+        //         },
+        //         enableChaosSpawns = false,
+        //         enableFireSpawns = false
+        //     },
+        //     new CustomerLevel
+        //     {
+        //         id = "baker",
+        //         displayName = "Baker",
+        //         flavorLine = "Bread and blades. I burn through both.",
+        //         orders = new List<OrderSpec>
+        //         {
+        //             OrderSpec.Of(ItemSubType.Bread),
+        //             OrderSpec.Of(ItemSubType.Bread)
+        //         },
+        //         enableChaosSpawns = false,
+        //         enableFireSpawns = false
+        //     },
+        //     new CustomerLevel
+        //     {
+        //         id = "necromancer",
+        //         displayName = "Necromancer",
+        //         flavorLine = "THE DEAD WANTS TOOLS THAT WON'T OBEY!",
+        //         orders = new List<OrderSpec>
+        //         {
+        //             OrderSpec.Of(ItemSubType.Knife)
+        //         },
+        //         enableChaosSpawns = false,
+        //         enableGhostSpawns = true,
+        //         ghostSpawnInterval = 6f,
+        //         ghostBurstCount = 2
+        //     },
+        //     new CustomerLevel
+        //     {
+        //         id = "fire_mage",
+        //         displayName = "Fire Mage",
+        //         flavorLine = "Heat it. Temper it. Bring it to me.",
+        //         orders = new List<OrderSpec>
+        //         {
+        //             OrderSpec.Of(ItemSubType.Bread, TraitType.Fire)
+        //         },
+        //         enableChaosSpawns = false,
+        //         enableFireSpawns = true,
+        //         fireSpawnInterval = 5f,
+        //         fireBurstCount = 2,
+        //         enableFireSpread = true,
+        //         fireSpreadInterval = 6f,
+        //         fireSpreadChance = 0.35f
+        //     },
+        //     new CustomerLevel
+        //     {
+        //         id = "ice_mage",
+        //         displayName = "Ice Mage",
+        //         flavorLine = "Freeze it. Seal it. Let it linger.",
+        //         orders = new List<OrderSpec>
+        //         {
+        //             OrderSpec.Of(ItemSubType.Bread, TraitType.Ice)
+        //         },
+        //         enableChaosSpawns = false,
+        //         enableIceSpawns = false,
+        //         iceSpawnInterval = 8f,
+        //         iceBurstCount = 2,
+        //         spawnInitialIceBurst = true,
+        //         enableIceAura = true,
+        //         iceToItemSeconds = 1f
+        //     },
+        // };
     }
 
     void EnsureMageCycleDefaults()
@@ -843,10 +843,12 @@ public class GameManager : MonoBehaviour
         currentOrder = null;
         orderSpawnTimer = 0f;
         PopUp.SetDialogueMode(autoAdvance: false, advanceOnEnter: true);
+        PopUp.SetPortrait(tutorialPortrait);
         PopUp.WriteSequence(tutorialSpeakerName, tutorialBeforeFirst, () =>
         {
             awaitingDialogue = false;
             PopUp.SetDialogueMode(autoAdvance: true, advanceOnEnter: false);
+            PopUp.SetPortrait(null);
             StartCustomerLevel(0);
         });
     }
@@ -950,10 +952,12 @@ public class GameManager : MonoBehaviour
                 orderSpawnTimer = 0f;
                 wantedView?.ClearWanted();
                 PopUp.SetDialogueMode(autoAdvance: true, advanceOnEnter: false);
+                PopUp.SetPortrait(tutorialPortrait);
                 PopUp.WriteSequence("Old Man", tutorialAfterIce, () =>
                 {
                     awaitingDialogue = false;
                     PopUp.SetDialogueMode(autoAdvance: true, advanceOnEnter: false);
+                    PopUp.SetPortrait(null);
                     postOldManLoop = true;
                     Debug.Log("[Customer] Old Man scripted done -> random");
                     StartRandomMage();
@@ -976,10 +980,12 @@ public class GameManager : MonoBehaviour
                     orderSpawnTimer = 0f;
                     wantedView?.ClearWanted();
                     PopUp.SetDialogueMode(autoAdvance: true, advanceOnEnter: false);
+                    PopUp.SetPortrait(tutorialPortrait);
                     PopUp.WriteSequence(tutorialSpeakerName, tutorialAfterBaker, () =>
                     {
                         awaitingDialogue = false;
                         PopUp.SetDialogueMode(autoAdvance: true, advanceOnEnter: false);
+                        PopUp.SetPortrait(null);
                         StartCustomerLevel(nextLevel);
                     });
                 }

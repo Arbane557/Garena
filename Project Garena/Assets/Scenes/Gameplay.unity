@@ -1891,170 +1891,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 832606043}
   m_CullTransparentMesh: 1
---- !u!1 &871692175
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 871692176}
-  - component: {fileID: 871692177}
-  m_Layer: 5
-  m_Name: Ice Trail
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &871692176
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 871692175}
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.022388453, y: 0.022388453, z: 0.022388453}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0.14, y: -0.42}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0.5, y: 0.5}
---- !u!96 &871692177
-TrailRenderer:
-  serializedVersion: 4
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 871692175}
-  m_Enabled: 1
-  m_CastShadows: 1
-  m_ReceiveShadows: 1
-  m_DynamicOccludee: 1
-  m_StaticShadowCaster: 0
-  m_MotionVectors: 0
-  m_LightProbeUsage: 0
-  m_ReflectionProbeUsage: 0
-  m_RayTracingMode: 0
-  m_RayTraceProcedural: 0
-  m_RayTracingAccelStructBuildFlagsOverride: 0
-  m_RayTracingAccelStructBuildFlags: 1
-  m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 1
-  m_RendererPriority: 0
-  m_Materials:
-  - {fileID: 10754, guid: 0000000000000000f000000000000000, type: 0}
-  m_StaticBatchInfo:
-    firstSubMesh: 0
-    subMeshCount: 0
-  m_StaticBatchRoot: {fileID: 0}
-  m_ProbeAnchor: {fileID: 0}
-  m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
-  m_ReceiveGI: 1
-  m_PreserveUVs: 0
-  m_IgnoreNormalsForChartDetection: 0
-  m_ImportantGI: 0
-  m_StitchLightmapSeams: 1
-  m_SelectedEditorRenderState: 3
-  m_MinimumChartSize: 4
-  m_AutoUVMaxDistance: 0.5
-  m_AutoUVMaxAngle: 89
-  m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: -341842359
-  m_SortingLayer: 1
-  m_SortingOrder: 1
-  m_MaskInteraction: 0
-  m_Time: 1
-  m_PreviewTimeScale: 1
-  m_Parameters:
-    serializedVersion: 3
-    widthMultiplier: 1
-    widthCurve:
-      serializedVersion: 2
-      m_Curve:
-      - serializedVersion: 3
-        time: 0
-        value: 0.20779228
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0.33333334
-        outWeight: 0.33333334
-      - serializedVersion: 3
-        time: 0.40438548
-        value: 0.12987456
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      - serializedVersion: 3
-        time: 0.9681274
-        value: 0
-        inSlope: 0
-        outSlope: 0
-        tangentMode: 0
-        weightedMode: 0
-        inWeight: 0
-        outWeight: 0
-      m_PreInfinity: 2
-      m_PostInfinity: 2
-      m_RotationOrder: 4
-    colorGradient:
-      serializedVersion: 2
-      key0: {r: 0.2783019, g: 0.383019, b: 1, a: 1}
-      key1: {r: 0.6650944, g: 0.88245887, b: 1, a: 1}
-      key2: {r: 0, g: 0, b: 0, a: 0}
-      key3: {r: 0, g: 0, b: 0, a: 0}
-      key4: {r: 0, g: 0, b: 0, a: 0}
-      key5: {r: 0, g: 0, b: 0, a: 0}
-      key6: {r: 0, g: 0, b: 0, a: 0}
-      key7: {r: 0, g: 0, b: 0, a: 0}
-      ctime0: 0
-      ctime1: 64571
-      ctime2: 0
-      ctime3: 0
-      ctime4: 0
-      ctime5: 0
-      ctime6: 0
-      ctime7: 0
-      atime0: 0
-      atime1: 65535
-      atime2: 0
-      atime3: 0
-      atime4: 0
-      atime5: 0
-      atime6: 0
-      atime7: 0
-      m_Mode: 0
-      m_ColorSpace: 0
-      m_NumColorKeys: 2
-      m_NumAlphaKeys: 2
-    numCornerVertices: 0
-    numCapVertices: 0
-    alignment: 0
-    textureMode: 0
-    textureScale: {x: 1, y: 1}
-    shadowBias: 0.5
-    generateLightingData: 0
-  m_MinVertexDistance: 0.1
-  m_Autodestruct: 0
-  m_Emitting: 1
-  m_ApplyActiveColorSpace: 1
 --- !u!1 &880183306
 GameObject:
   m_ObjectHideFlags: 0
@@ -2740,7 +2576,7 @@ MonoBehaviour:
   traitIcon: {fileID: 0}
   traitIconRow: {fileID: 477759947}
   traitIconPrefab: {fileID: 8088498887320801041, guid: 5fbc06d0bc6044a41a08a442a5120049, type: 3}
-  customerPortrait: {fileID: 0}
+  customerPortrait: {fileID: 1462593386}
   timerFill: {fileID: 0}
   labelText: {fileID: 1383146746}
   timerText: {fileID: 0}
@@ -5789,9 +5625,140 @@ MonoBehaviour:
   minOrderTraits: 1
   maxOrderTraits: 2
   dualFireIceChance: 0.2
-  customerLevels: []
+  customerLevels:
+  - id: traveler
+    displayName: Traveler
+    flavorLine: I have a long road ahead. Keep it simple.
+    portrait: {fileID: 3714144374617566936, guid: 13567169b0b55e74b8583287edfe60c0, type: 3}
+    orders:
+    - subType: 1
+      requiredTraits: 
+    enableChaosSpawns: 0
+    enableFireSpawns: 0
+    fireSpawnInterval: 0
+    fireBurstCount: 0
+    enableFireSpread: 0
+    fireSpreadInterval: 0
+    fireSpreadChance: 0
+    enableIceSpawns: 0
+    iceSpawnInterval: 0
+    iceBurstCount: 0
+    spawnInitialIceBurst: 0
+    enableIceAura: 0
+    iceToItemSeconds: 0
+    enableGhostSpawns: 0
+    ghostSpawnInterval: 0
+    ghostBurstCount: 0
+    loopOrders: 0
+  - id: baker
+    displayName: Baker
+    flavorLine: Bread and blades. I burn through both.
+    portrait: {fileID: 8172517314757826419, guid: 92004034a2945924595dbb36b4846d11, type: 3}
+    orders:
+    - subType: 0
+      requiredTraits: 
+    enableChaosSpawns: 0
+    enableFireSpawns: 0
+    fireSpawnInterval: 0
+    fireBurstCount: 0
+    enableFireSpread: 0
+    fireSpreadInterval: 0
+    fireSpreadChance: 0
+    enableIceSpawns: 0
+    iceSpawnInterval: 0
+    iceBurstCount: 0
+    spawnInitialIceBurst: 0
+    enableIceAura: 0
+    iceToItemSeconds: 0
+    enableGhostSpawns: 0
+    ghostSpawnInterval: 0
+    ghostBurstCount: 0
+    loopOrders: 0
+  - id: necromancer
+    displayName: Necromancer
+    flavorLine: THE DEAD WANTS TOOLS THAT WON'T OBEY!
+    portrait: {fileID: -4412621582066746438, guid: 9434ec3e792713541ac065d08a33e0d0, type: 3}
+    orders:
+    - subType: 1
+      requiredTraits: 
+    - subType: 0
+      requiredTraits: 
+    enableChaosSpawns: 0
+    enableFireSpawns: 0
+    fireSpawnInterval: 0
+    fireBurstCount: 0
+    enableFireSpread: 0
+    fireSpreadInterval: 0
+    fireSpreadChance: 0
+    enableIceSpawns: 0
+    iceSpawnInterval: 0
+    iceBurstCount: 0
+    spawnInitialIceBurst: 0
+    enableIceAura: 0
+    iceToItemSeconds: 0
+    enableGhostSpawns: 1
+    ghostSpawnInterval: 6
+    ghostBurstCount: 2
+    loopOrders: 1
+  - id: fire_mage
+    displayName: Fire Mage
+    flavorLine: Heat it. Temper it. Bring it to me.
+    portrait: {fileID: -1090375604981771204, guid: b2684d5a5b4240840b0049960618c357, type: 3}
+    orders:
+    - subType: 1
+      requiredTraits: 00000000
+    - subType: 2
+      requiredTraits: 00000000
+    - subType: 0
+      requiredTraits: 00000000
+    enableChaosSpawns: 0
+    enableFireSpawns: 1
+    fireSpawnInterval: 5
+    fireBurstCount: 2
+    enableFireSpread: 1
+    fireSpreadInterval: 6
+    fireSpreadChance: 0.35
+    enableIceSpawns: 0
+    iceSpawnInterval: 0
+    iceBurstCount: 0
+    spawnInitialIceBurst: 0
+    enableIceAura: 0
+    iceToItemSeconds: 0
+    enableGhostSpawns: 0
+    ghostSpawnInterval: 0
+    ghostBurstCount: 0
+    loopOrders: 0
+  - id: ice_mage
+    displayName: Ice Mage
+    flavorLine: Freeze it. Seal it. Let it linger
+    portrait: {fileID: -4549388218463153738, guid: 5e250abc537ea1d448f54975c77e4e09, type: 3}
+    orders:
+    - subType: 1
+      requiredTraits: 01000000
+    - subType: 2
+      requiredTraits: 01000000
+    - subType: 0
+      requiredTraits: 01000000
+    enableChaosSpawns: 0
+    enableFireSpawns: 0
+    fireSpawnInterval: 0
+    fireBurstCount: 0
+    enableFireSpread: 0
+    fireSpreadInterval: 0
+    fireSpreadChance: 0.35
+    enableIceSpawns: 1
+    iceSpawnInterval: 8
+    iceBurstCount: 2
+    spawnInitialIceBurst: 1
+    enableIceAura: 1
+    iceToItemSeconds: 1
+    enableGhostSpawns: 0
+    ghostSpawnInterval: 0
+    ghostBurstCount: 0
+    loopOrders: 0
   mageCycleIds: []
   tutorialSpeakerName: Old Man
+  tutorialPortrait: {fileID: -6993387854754793676, guid: 74b499072fed5fd4689edb87330b5e3a, type: 3}
   tutorialBeforeFirst:
   - Welcome. Keep items organized and watch the order box.
   - "Top\u2011left is the item conveyor. Press Enter on an empty cell to spawn the
@@ -6392,12 +6359,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PopUp
   nameText: {fileID: 1376064562}
   text: {fileID: 2003255806}
+  portraitImage: {fileID: 1462593386}
   canvasGroup: {fileID: 1911440963}
-  charDelay: 0.04
-  holdSeconds: 1.5
+  charDelay: 0.02
+  holdSeconds: 1
   minHoldSeconds: 0.25
   autoAdvanceDialogue: 1
-  advanceOnEnter: 0
+  advanceOnEnter: 1
   talkSfxId: Talk
   talkEveryNChars: 2
 --- !u!225 &1911440963
@@ -7766,7 +7734,6 @@ SceneRoots:
   - {fileID: 477340751}
   - {fileID: 1911440961}
   - {fileID: 1620183939}
-  - {fileID: 871692176}
   - {fileID: 1548567375}
   - {fileID: 1787496005}
   - {fileID: 2200000000}
